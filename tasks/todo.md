@@ -1,85 +1,118 @@
-# TODO — F1: Infraestructura
+# TODO — F2: Núcleo
 
-**Fecha:** 2026-07-03 | **Estado:** ✅ COMPLETADO
+**Fecha:** 2026-07-03 | **Estado:** 📋 LISTO PARA EJECUTAR
 **Referencia:** [plan.md](plan.md)
 
 ---
 
-## Slice 1: Compose Config Foundation (1.9 h)
+## Slice 1: Schema Foundation (3.5 h)
 
-- [x] **F1-01** — Completar `docker/docker-compose.yml` con environment, ports (solo Metabase), volumes named, healthcheck (pg_isready), network `ecommerce_net`, mem_limit, restart policy, depends_on service_healthy
-- [x] **F1-02** — Extender `.env.example` con 7 vars faltantes: `MB_DB_TYPE`, `MB_DB_DBNAME`, `MB_DB_PORT`, `MB_DB_USER`, `MB_DB_PASS`, `MB_DB_HOST`, `METABASE_SECRET_KEY`
-- [x] **F1-03** — Crear `.dockerignore` con patrones: `venv/`, `tests/`, `__pycache__/`, `*.pyc`, `.env`, `.env.*`, `.git/`, `metabase-data/`, `data/`, `*.log`, `.pytest_cache/`
-- [x] **F1-04** — Crear `docker/docker-compose.override.yml` template con `services: {}` y comentario explicativo
+- [ ] **F2-01** — Crear `scripts/init.sql` con 6 dimensiones (categorias, proveedores, productos, clientes, tiempo, promociones). Aplicar SERIAL PK, UNIQUE en campos clave, CHECK constraints, NOT NULL, COMMENT ON TABLE
+- [ ] **F2-02** — Añadir 4 hechos (ventas, inventario, devoluciones, logistica) a `scripts/init.sql` con FKs explícitas, CHECK constraints, índices B-tree en cada FK
+- [ ] **F2-03** — Validar schema: `make db-init` exit 0, `make db-reset` roundtrip funciona, `\dt` muestra 10 tablas
 
-## Checkpoint 1: Config Foundation ✅
+## Checkpoint 1: Schema Foundation ✅
 
-- [x] `make validate` exit 0 sin warnings
-- [x] `.env.example` tiene ≥ 14 variables
-- [x] `docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.yml config` exit 0
-- [x] `.dockerignore` excluye `venv/`, `.env`, `tests/`, `__pycache__/`
-- [x] `git check-ignore .env` retorna el path
-
----
-
-## Slice 2: Services Up & Healthy (35 min)
-
-- [x] **F1-05** — `make up` levanta ambos servicios; `make status` muestra `metabase-postgres` y `metabase-app` en estado "Up"
-- [x] **F1-06** — `make db-check` retorna "accepting connections"; log de PostgreSQL muestra "database system is ready"
-- [x] **F1-07** — `make logs-mb` muestra "Metabase Initialization Complete" sin FATAL ni "Connection refused"
-
-## Checkpoint 2: Services Healthy ✅
-
-- [x] `make up` exit 0, ambos contenedores `Up`
-- [x] `make db-check` retorna "accepting connections"
-- [x] `make logs-mb | tail -50` muestra "Metabase Initialization Complete" sin errores
-- [x] Docker healthcheck status = "healthy"
-- [x] Metabase status = "running"
+- [ ] `make db-init` exit 0 (schema completo)
+- [ ] `make db-reset` roundtrip funciona (DROP CASCADE + init.sql)
+- [ ] 10 tablas en `information_schema.tables` (6 dim + 4 hechos)
+- [ ] Todas las FKs declaradas con `REFERENCES`
+- [ ] CHECK constraints en precios/stocks/cantidades
+- [ ] Índices B-tree en cada FK
 
 ---
 
-## Slice 3: Integration & Resilience (55 min)
+## Slice 2: Data Generation (5 h)
 
-- [x] **F1-08** — `curl -s http://localhost:3000/api/health` retorna 200 con `{"status":"ok"}`
-- [x] **F1-09** — `make logs-mb | grep -iE "database|postgres"` muestra inicialización sin errores
-- [x] **F1-10** — Persistencia: crear `_f1_test` table, `make down && make up`, verificar que tabla persiste, luego DROP
-- [x] **F1-11** — Port isolation: `docker port metabase-postgres` retorna vacío; `nc -zv localhost 5432 -w 2` falla
+- [ ] **F2-04** — Crear `scripts/requirements.txt` con faker>=18.0, psycopg2-binary>=2.9, python-dotenv>=1.0
+- [ ] **F2-05** — Implementar `scripts/generate_data.py`: clase `DataGenerator`, `connect_db()`, `main()` con transacciones, argparse `--debug`/`--scale`/`--reset`. Métodos `_seed_categorias()`, `_seed_proveedores()`
+- [ ] **F2-06** — Implementar `_seed_productos()` (5K Pareto 70/30), `_seed_clientes()` (2K), `_seed_tiempo()` (365 días 2026), `_seed_promociones()` (30)
+- [ ] **F2-07** — Implementar `_seed_ventas()` (100K Pareto 70/30), `_seed_inventario()` (50K), `_seed_devoluciones()` (5K = 5% ventas), `_seed_logistica()` (20K = 20% ventas)
+- [ ] **F2-08** — Validar: `make data-count` exit 0, `make test-integrity` exit 0, `total = cantidad * precio_unitario` en 100% ventas
 
-## Checkpoint 3: Resilience Verified ✅
+## Checkpoint 2: Data Valid ✅
 
-- [x] `curl -s http://localhost:3000/api/health` retorna 200
-- [x] `make logs-mb` NO contiene "Connection refused" ni "FATAL"
-- [x] Tabla `_f1_test` persiste tras `make down && make up` (3 rows verificadas)
-- [x] 2 volumes named persisten (`metabase-dashboard-fish_pg_data`, `metabase-dashboard-fish_mb_data`)
-- [x] `docker port metabase-postgres` retorna vacío (BD aislada de host)
-- [x] `nc -zv localhost 5432` falla (puerto no expuesto a host)
+- [ ] `make deps` exit 0
+- [ ] `python scripts/generate_data.py --reset` exit 0
+- [ ] Volúmenes: 20+50+5000+2000+365+30+100000+50000+5000+20000 = **155,535 registros**
+- [ ] `make test-integrity` exit 0 (sin huérfanos)
+- [ ] `make data-count` exit 0 con todos los conteos
+- [ ] Ventas: `total = cantidad * precio_unitario` en 100% de filas
+- [ ] Tiempo: 365 días consecutivos (2026-01-01 a 2026-12-31)
 
 ---
 
-## Slice 4: Automated Test Suite (1 h)
+## Slice 3: Indexes (1.5 h)
 
-- [x] **F1-12** — Crear `tests/test_f1.py` con:
-  - 61 tests estáticos: config válido, vars presentes, healthcheck definido, network interno, mem_limit
-  - 6 tests runtime con marker `@pytest.mark.runtime`: services up, pg_isready, logs, health API, port isolation
-  - Skip automático si Docker no disponible
+- [ ] **F2-09** — Crear `sql/indexes/create_indexes.sql` con 9+ índices B-tree (`IF NOT EXISTS`). Mínimo: idx_ventas_{producto,cliente,fecha}_id, idx_inventario_{producto,fecha}_id, idx_devoluciones_venta_id, idx_productos_{categoria,proveedor}_id, idx_ventas_fecha_venta
+- [ ] **F2-10** — Validar con EXPLAIN ANALYZE las 4 queries críticas de `docs/SCHEMA.md` §4; documentar en `sql/queries_baseline.sql`. Tiempos <500ms con Index Scan
 
-## Checkpoint 4: F1 Complete ✅ (Ready para F2)
+## Checkpoint 3: Indexes Applied ✅
 
-- [x] `make test` muestra F0 (72) + F1 (67) = **139 tests passing**
-- [x] FTR de F1 pasa checklist de `docs/WORKFLOW.md` §5 (Servicios levantan / Credenciales seguras / Persistencia configurada)
-- [x] `make up && make down && make up` roundtrip funciona sin errores
-- [x] `make validate && make up && make status` es la ruta crítica documentada
-- [x] 2 commits atómicos para F1 (Slice 1 + Slices 2-3)
-- [x] Working tree limpio
+- [ ] `make indexes-check` muestra 9+ índices
+- [ ] Todas las queries críticas usan Index Scan (no Seq Scan)
+- [ ] Tiempos baseline <500ms (medidos con `\timing`)
+- [ ] `sql/queries_baseline.sql` documenta el plan de ejecución
+
+---
+
+## Slice 4: Materialized Views (2 h)
+
+- [ ] **F2-11** — Crear `sql/views/mv_rotacion_mensual.sql` con CREATE MATERIALIZED VIEW (categoría/mes/año, ventas_totales, ingresos_totales, productos_vendidos). Índices en categoria y (mes, anio)
+- [ ] **F2-12** — Crear `sql/views/mv_stock_actual.sql` con CASE para estado (ALERTA/PRECAUCION/OK). Índices en estado y producto_id
+- [ ] **F2-13** — Crear `sql/views/mv_top_productos.sql` (ORDER BY ingresos DESC, top 100). Índice en ingresos_totales DESC
+- [ ] **F2-14** — Crear `scripts/refresh_materialized_views.sql` con REFRESH MATERIALIZED VIEW para las 3 MVs
+- [ ] **F2-15** — Validar queries contra MVs <2s con EXPLAIN ANALYZE
+
+## Checkpoint 4: Materialized Views Active ✅
+
+- [ ] 3 MVs creadas: `mv_rotacion_mensual`, `mv_stock_actual`, `mv_top_productos`
+- [ ] `make mv-refresh` exit 0 (refresca las 3)
+- [ ] Índices en cada MV creados
+- [ ] Queries contra MVs <2s (validado con EXPLAIN ANALYZE)
+- [ ] MVs pobladas con datos (`WITH DATA`)
+
+---
+
+## Slice 5: Partitioning (2 h)
+
+- [ ] **F2-16** — Crear `sql/partitions/partition_ventas.sql`: DROP ventas CASCADE + CREATE ventas PARTITION BY RANGE (fecha_venta) + 12 particiones mensuales (2026_01 a 2026_12)
+- [ ] **F2-17** — Recrear índices (IF NOT EXISTS) en tabla particionada. Validar partition pruning con EXPLAIN ANALYZE filtrando por rango de fecha
+- [ ] **F2-18** — Re-validar queries <2s post-particion. Refrescar MVs. Documentar comparación en `docs/PERFORMANCE.md`
+
+## Checkpoint 5: Partitioning Active ✅
+
+- [ ] `ventas` es tabla particionada con 12 particiones mensuales
+- [ ] `pg_partition_tree('ventas')` retorna 12 hijos + 1 padre
+- [ ] EXPLAIN muestra **partition pruning** en queries con filtro fecha
+- [ ] Índices recreados en tabla particionada
+- [ ] MVs refrescadas tras recreación de `ventas`
+- [ ] Queries siguen <2s (performance mantenida o mejorada)
+
+---
+
+## Slice 6: Test Suite (2.5 h)
+
+- [ ] **F2-19** — Crear `tests/test_f2.py` con **tests estáticos** (≥15): existencia de archivos SQL/Python, regex CREATE TABLE para 10 tablas, AST parse de generate_data.py, MVs definidas
+- [ ] **F2-20** — Añadir **tests runtime** (≥25) con `@pytest.mark.runtime` (skip si no Docker): `make db-init`, conteos ≥ esperados, `make test-integrity`, EXPLAIN ANALYZE <2s para MVs, `pg_partition_tree` 12 particiones, REFRESH MATERIALIZED VIEW
+
+## Checkpoint 6: F2 Complete ✅ (Ready para F3)
+
+- [ ] `make test` muestra F0 (72) + F1 (67) + F2 (≥40) = **≥179 tests passing**
+- [ ] FTR de F2 pasa checklist de `docs/WORKFLOW.md` §5 (Schema + datos + queries optimizadas)
+- [ ] Roundtrip `make db-reset && make data-generate && make mv-refresh` funciona
+- [ ] `make validate && make up && make db-init && make data-generate && make mv-refresh` es la ruta crítica
+- [ ] `git log --oneline` muestra 6-8 commits atómicos para F2
+- [ ] Working tree limpio
 
 ---
 
 ## Progreso
 
-- **Total tareas:** 12
-- **Tareas completadas:** 12/12 ✅
-- **Checkpoints pasados:** 4/4 ✅
-- **Tiempo invertido:** ~3h (static) + ~30min (runtime) = ~3.5h
-- **Estimación plan:** 4.5h → **Real: ~3.5h** (-22%)
-- **Tests totales:** 139 (72 F0 + 67 F1) — todos pasando
-- **Commits:** 16 en feat/mvp-dashboard (14 anteriores + 2 F1)
+- **Total tareas:** 20
+- **Tareas completadas:** 0/20
+- **Checkpoints pasados:** 0/6
+- **Tiempo estimado:** ~12h (1.5 días)
+- **Tests objetivo:** 72 (F0) + 67 (F1) + ≥40 (F2) = **≥179 tests**
+- **Commits objetivo:** 6-8 atómicos
+- **Alcance confirmado:** Particionamiento ✅, Logistica completa ✅, test_f2.py completo ✅
