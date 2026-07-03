@@ -23,7 +23,10 @@ services:
     networks:
       - ecommerce_net
     restart: unless-stopped
-    mem_limit: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1g
 
   # ─── Metabase OSS (BI Visualization) ──────────────────────────────────────
   metabase:
@@ -38,6 +41,13 @@ services:
       MB_DB_USER: ${MB_DB_USER}
       MB_DB_PASS: ${MB_DB_PASS}
       MB_DB_HOST: ${MB_DB_HOST}
+      MB_ENCRYPTION_SECRET_KEYS: ${MB_ENCRYPTION_SECRET_KEYS}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     volumes:
       - mb_data:/metabase-data
     depends_on:
@@ -46,7 +56,10 @@ services:
     networks:
       - ecommerce_net
     restart: unless-stopped
-    mem_limit: 2g
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
 # ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
