@@ -7,11 +7,19 @@ Verifica todos los criterios de aceptación del plan F1:
 - Slice 3: Integration & Resilience (persistence, port isolation)
 - Security: Port isolation, secrets management
 """
-import os
 import subprocess
 from pathlib import Path
 
 import pytest
+
+# ─── Helpers ────────────────────────────────────────────────
+def has_docker() -> bool:
+    """Check if Docker daemon is available for runtime tests."""
+    rc = subprocess.run(
+        ["docker", "info", "--format", "{{.ServerVersion}}"],
+        capture_output=True,
+    ).returncode
+    return rc == 0
 
 # ─── Constants ───────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -316,22 +324,14 @@ class TestSecurityF1:
     def test_no_hardcoded_creds_in_compose(self):
         """No hardcoded passwords in docker-compose.yml."""
         content = compose_content()
-        forbidden = ["POSTGRES_PASSWORD: ", "POSTGRES_USER: admin",
-                     "MB_DB_USER: ", "MB_DB_PASS: "]
-        # The env vars should reference ${VAR} not literal values
-        # Lines like "POSTGRES_PASSWORD: change-me" would be hardcoded
+        sensitive_keys = ["POSTGRES_PASSWORD:", "MB_DB_PASS:"]
         for line in content.splitlines():
-            for pattern in ["POSTGRES_PASSWORD:", "MB_DB_PASS:"]:
-                if pattern in line and "${" not in line:
-                    # Allow default values with YAML inline ${VAR:-default}
-                    # But flag naked assignments
-                    if "=" not in line and ":" not in line.replace(" ", "").replace("-", ""):
-                        continue
-                    stripped = line.strip()
-                    if stripped.startswith("#"):
-                        continue
-                    if stripped.startswith(pattern) and "${" not in stripped:
-                        pytest.fail(f"Hardcoded credential found: {stripped}")
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            for key in sensitive_keys:
+                if key in stripped and "${" not in stripped:
+                    pytest.fail(f"Hardcoded credential found: {stripped}")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -341,16 +341,10 @@ class TestRuntimeServices:
     """F1-05 to F1-07: Services must be up and healthy.
     These tests run only with Docker available (mark: runtime)."""
 
-    @staticmethod
-    def _has_docker(run_cmd) -> bool:
-        """Check if Docker daemon is available."""
-        rc, _, _ = run_cmd("docker info --format '{{.ServerVersion}}'")
-        return rc == 0
-
     @pytest.mark.runtime
     def test_services_are_running(self, run_cmd):
         """F1-05: Both containers must be Up."""
-        if not self._has_docker(run_cmd):
+        if not has_docker():
             pytest.skip("Docker not available")
 
         rc, stdout, stderr = run_cmd(
@@ -365,7 +359,7 @@ class TestRuntimeServices:
     @pytest.mark.runtime
     def test_postgres_accepts_connections(self, run_cmd):
         """F1-06: pg_isready returns accepting connections."""
-        if not self._has_docker(run_cmd):
+        if not has_docker():
             pytest.skip("Docker not available")
 
         rc, stdout, stderr = run_cmd(
@@ -378,7 +372,7 @@ class TestRuntimeServices:
     @pytest.mark.runtime
     def test_metabase_logs_no_fatal(self, run_cmd):
         """F1-07: Metabase logs must not contain FATAL or Connection refused."""
-        if not self._has_docker(run_cmd):
+        if not has_docker():
             pytest.skip("Docker not available")
 
         rc, stdout, stderr = run_cmd(
@@ -396,15 +390,10 @@ class TestRuntimeServices:
 class TestRuntimeIntegration:
     """F1-08 to F1-11: Integration tests require running services."""
 
-    @staticmethod
-    def _has_docker(run_cmd) -> bool:
-        rc, _, _ = run_cmd("docker info --format '{{.ServerVersion}}'")
-        return rc == 0
-
     @pytest.mark.runtime
     def test_metabase_api_health(self, run_cmd):
         """F1-08: Metabase API health endpoint returns OK."""
-        if not self._has_docker(run_cmd):
+        if not has_docker():
             pytest.skip("Docker not available")
 
         rc, stdout, stderr = run_cmd(
@@ -416,7 +405,7 @@ class TestRuntimeIntegration:
     @pytest.mark.runtime
     def test_port_5432_not_exposed(self, run_cmd):
         """F1-11: PostgreSQL port 5432 must NOT be exposed to host."""
-        if not self._has_docker(run_cmd):
+        if not has_docker():
             pytest.skip("Docker not available")
 
         rc, stdout, stderr = run_cmd(
@@ -430,7 +419,7 @@ class TestRuntimeIntegration:
     @pytest.mark.runtime
     def test_nc_port_5432_refused(self, run_cmd):
         """F1-11: nc should report connection refused to localhost:5432."""
-        if not self._has_docker(run_cmd):
+        if not has_docker():
             pytest.skip("Docker not available")
 
         rc, stdout, stderr = run_cmd("nc -zv localhost 5432 -w 2 2>&1")
