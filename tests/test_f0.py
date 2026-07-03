@@ -85,9 +85,9 @@ class TestScriptsCleanup:
 
     def test_no_sh_files(self, root: Path):
         scripts_dir = root / "scripts"
-        if scripts_dir.exists():
-            sh_files = list(scripts_dir.glob("*.sh"))
-            assert len(sh_files) == 0, f"Found .sh files: {[f.name for f in sh_files]}"
+        assert scripts_dir.is_dir(), "scripts/ directory must exist"
+        sh_files = list(scripts_dir.glob("*.sh"))
+        assert len(sh_files) == 0, f"Found .sh files: {[f.name for f in sh_files]}"
 
 
 class TestGitignore:
@@ -254,6 +254,15 @@ class TestSecurity:
 class TestVenv:
     """Python virtual environment exists and has dependencies."""
 
+    @staticmethod
+    def _pip_list(root: Path) -> str:
+        """Return pip list output for the venv."""
+        result = subprocess.run(
+            ["venv/bin/python", "-m", "pip", "list"],
+            capture_output=True, text=True, cwd=root
+        )
+        return result.stdout
+
     def test_venv_exists(self, root: Path):
         assert (root / "venv").is_dir()
 
@@ -264,15 +273,7 @@ class TestVenv:
         assert (root / "venv" / "bin" / "pip").exists()
 
     def test_venv_has_faker(self, root: Path):
-        result = subprocess.run(
-            ["venv/bin/python", "-m", "pip", "list"],
-            capture_output=True, text=True, cwd=root
-        )
-        assert "Faker" in result.stdout, "Faker not found in venv"
+        assert "Faker" in self._pip_list(root), "Faker not found in venv"
 
     def test_venv_has_psycopg2(self, root: Path):
-        result = subprocess.run(
-            ["venv/bin/python", "-m", "pip", "list"],
-            capture_output=True, text=True, cwd=root
-        )
-        assert "psycopg2" in result.stdout, "psycopg2 not found in venv"
+        assert "psycopg2" in self._pip_list(root), "psycopg2 not found in venv"
