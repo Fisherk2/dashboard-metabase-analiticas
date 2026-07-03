@@ -291,3 +291,130 @@ class TestForeignKeys:
             rf"{column}.+REFERENCES.+{references}",
             content, re.IGNORECASE
         ), f"Missing FOREIGN KEY: {table}.{column} -> {references}(id)"
+
+
+# ─── Slice 2: Data Generation ─────────────────────────────────
+
+class TestGenerateData:
+    """F2-05: scripts/generate_data.py existe y tiene estructura correcta."""
+
+    GEN_PATH = "scripts/generate_data.py"
+
+    def test_generate_data_exists(self, root: Path):
+        assert (root / self.GEN_PATH).exists(), f"Missing: {self.GEN_PATH}"
+
+    def test_generate_data_has_main_function(self, root: Path):
+        """El script define una función main()."""
+        source = (root / self.GEN_PATH).read_text()
+        tree = ast.parse(source)
+        has_main = any(
+            isinstance(node, ast.FunctionDef) and node.name == "main"
+            for node in ast.walk(tree)
+        )
+        assert has_main, "Missing 'main()' function in generate_data.py"
+
+    def test_generate_data_has_data_generator_class(self, root: Path):
+        """El script define la clase DataGenerator."""
+        source = (root / self.GEN_PATH).read_text()
+        tree = ast.parse(source)
+        has_class = any(
+            isinstance(node, ast.ClassDef) and node.name == "DataGenerator"
+            for node in ast.walk(tree)
+        )
+        assert has_class, "Missing 'DataGenerator' class in generate_data.py"
+
+    @pytest.mark.parametrize("mod", [
+        "faker",
+        "psycopg2",
+        "dotenv",
+        "argparse",
+        "logging",
+        "datetime",
+        "random",
+    ])
+    def test_generate_imports(self, root: Path, mod: str):
+        """Importa los módulos requeridos."""
+        source = (root / self.GEN_PATH).read_text()
+        tree = ast.parse(source)
+        imports = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.add(alias.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imports.add(node.module.split(".")[0])
+        assert mod in imports, f"Missing import: {mod}"
+
+    def test_generate_data_has_argparse(self, root: Path):
+        """El script usa argparse con flags --debug, --scale, --reset."""
+        source = (root / self.GEN_PATH).read_text()
+        assert "argparse" in source or "ArgumentParser" in source, (
+            "generate_data.py should use argparse"
+        )
+        # Check for expected flags
+        assert "--debug" in source, "Missing --debug flag"
+        assert "--scale" in source or "-n" in source, (
+            "Missing --scale flag"
+        )
+        # Check for some reset mechanism
+        assert any(flag in source for flag in ("--reset", "--truncate")), (
+            "Missing --reset or --truncate flag"
+        )
+
+    def test_generate_data_has_dotenv(self, root: Path):
+        """El script carga variables de entorno con python-dotenv."""
+        source = (root / self.GEN_PATH).read_text()
+        assert "load_dotenv" in source or "dotenv" in source, (
+            "generate_data.py should use python-dotenv"
+        )
+
+
+class TestGenerateDataRuntime:
+    """F2-05 runtime: valida que generate_data.py ejecuta correctamente.
+
+    Requiere Docker corriendo con PostgreSQL.
+    """
+
+    GEN_PATH = "scripts/generate_data.py"
+    REQUIREMENTS = "scripts/requirements.txt"
+
+    @pytest.mark.runtime
+    def test_generate_data_runs_without_errors(self, root, run_cmd):
+        """El script genera datos sin errores (modo --debug)."""
+        rc, stdout, stderr = run_cmd(
+            f"python {root / self.GEN_PATH} --debug",
+            timeout=120
+        )
+        assert rc == 0, (
+            f"generate_data.py failed:\nstdout:{stdout}\nstderr:{stderr}"
+        )
+
+    @pytest.mark.runtime
+    def test_generate_data_reports_counts(self, root, run_cmd):
+        """El script reporta conteos de registros generados."""
+        rc, stdout, stderr = run_cmd(
+            f"python {root / self.GEN_PATH} --debug",
+            timeout=120
+        )
+        assert rc == 0
+        assert any(word in stdout.lower() for word in [
+            "registro", "record", "insert", "total", "count", "ventas"
+        ]), f"Output should contain record counts:\n{stdout[:500]}"
+
+    @pytest.mark.runtime
+    def test_generate_data_reset_works(self, root, run_cmd):
+        """El modo --reset ejecuta TRUNCATE CASCADE sin errores."""
+        rc, stdout, stderr = run_cmd(
+            f"python {root / self.GEN_PATH} --reset --debug",
+            timeout=120
+        )
+        assert rc == 0, (
+            f"generate_data.py --reset failed:\nstdout:{stdout}\nstderr:{stderr}"
+        )
+
+    @pytest.mark.runtime
+    def test_can_import_required_libraries(self, root, run_cmd):
+        """Los módulos requeridos son importables desde el Python del proyecto."""
+        rc, stdout, _ = run_cmd("python -c 'import faker; import psycopg2; import dotenv; print(\"OK\")'")
+        assert rc == 0 and "OK" in stdout, "Cannot import required libraries"
