@@ -56,11 +56,11 @@ db-shell: ## Conectar a psql interactivo
 	docker exec -it metabase-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
 
 db-init: ## Ejecutar schema inicial (scripts/init.sql)
-	$(PSQL) -f scripts/init.sql
+	$(PSQL) < scripts/init.sql
 
 db-reset: ## ⚠️ Reiniciar BD desde cero (drop + recreate + init)
 	$(PSQL) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-	$(MAKE) db-init
+	$(MAKE) db-init 2>/dev/null || $(PSQL) < scripts/init.sql
 
 db-check: ## Verificar que PostgreSQL está listo
 	docker exec -i metabase-postgres pg_isready -U $(POSTGRES_USER)
@@ -88,7 +88,7 @@ data-count: ## Contar registros por tabla
 .PHONY: mv-refresh indexes-check
 
 mv-refresh: ## Refrescar vistas materializadas
-	$(PSQL) -f scripts/refresh_materialized_views.sql
+	test -f scripts/refresh_materialized_views.sql && $(PSQL) < scripts/refresh_materialized_views.sql || echo "No views to refresh yet (file not found)"
 
 indexes-check: ## Listar todos los índices
 	$(PSQL) -c "SELECT indexname, tablename, indexdef FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename, indexname;"

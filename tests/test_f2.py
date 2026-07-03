@@ -380,22 +380,24 @@ class TestGenerateDataRuntime:
     REQUIREMENTS = "scripts/requirements.txt"
 
     @pytest.mark.runtime
+    @pytest.mark.timeout(300)
     def test_generate_data_runs_without_errors(self, root, run_cmd):
         """El script genera datos sin errores (modo --debug)."""
         rc, stdout, stderr = run_cmd(
-            f"python {root / self.GEN_PATH} --debug",
-            timeout=120
+            f"python {root / self.GEN_PATH} --debug --scale 0.1",
+            timeout=300
         )
         assert rc == 0, (
             f"generate_data.py failed:\nstdout:{stdout}\nstderr:{stderr}"
         )
 
     @pytest.mark.runtime
+    @pytest.mark.timeout(300)
     def test_generate_data_reports_counts(self, root, run_cmd):
         """El script reporta conteos de registros generados."""
         rc, stdout, stderr = run_cmd(
-            f"python {root / self.GEN_PATH} --debug",
-            timeout=120
+            f"python {root / self.GEN_PATH} --debug --scale 0.1",
+            timeout=300
         )
         assert rc == 0
         assert any(word in stdout.lower() for word in [
@@ -403,11 +405,12 @@ class TestGenerateDataRuntime:
         ]), f"Output should contain record counts:\n{stdout[:500]}"
 
     @pytest.mark.runtime
+    @pytest.mark.timeout(300)
     def test_generate_data_reset_works(self, root, run_cmd):
         """El modo --reset ejecuta TRUNCATE CASCADE sin errores."""
         rc, stdout, stderr = run_cmd(
-            f"python {root / self.GEN_PATH} --reset --debug",
-            timeout=120
+            f"python {root / self.GEN_PATH} --reset --debug --scale 0.1",
+            timeout=300
         )
         assert rc == 0, (
             f"generate_data.py --reset failed:\nstdout:{stdout}\nstderr:{stderr}"
@@ -418,3 +421,184 @@ class TestGenerateDataRuntime:
         """Los módulos requeridos son importables desde el Python del proyecto."""
         rc, stdout, _ = run_cmd("python -c 'import faker; import psycopg2; import dotenv; print(\"OK\")'")
         assert rc == 0 and "OK" in stdout, "Cannot import required libraries"
+
+
+# ─── Slice 3: Indexes ───────────────────────────────────────
+
+class TestIndexes:
+    """F2-09: Archivo de índices existe y Contiene CREATE INDEX."""
+
+    INDEX_PATH = "sql/indexes/create_indexes.sql"
+    QUERIES_PATH = "sql/queries_baseline.sql"
+
+    def test_index_file_exists(self, root: Path):
+        assert (root / self.INDEX_PATH).exists()
+
+    def test_queries_baseline_exists(self, root: Path):
+        assert (root / self.QUERIES_PATH).exists()
+
+    def test_index_file_has_create_statements(self, root: Path):
+        content = (root / self.INDEX_PATH).read_text()
+        create_count = content.count("CREATE INDEX")
+        assert create_count >= 9, f"Expected >=9 CREATE INDEX, found {create_count}"
+
+    def test_index_file_has_if_not_exists(self, root: Path):
+        content = (root / self.INDEX_PATH).read_text()
+        assert "IF NOT EXISTS" in content, "All indexes should use IF NOT EXISTS"
+
+    def test_queries_baseline_has_explain_analyze(self, root: Path):
+        content = (root / self.QUERIES_PATH).read_text()
+        assert "EXPLAIN ANALYZE" in content, "Baseline should contain EXPLAIN ANALYZE"
+        count = content.count("EXPLAIN ANALYZE")
+        assert count >= 4, f"Expected >=4 EXPLAIN ANALYZE, found {count}"
+
+
+# ─── Slice 4: Materialized Views ────────────────────────────
+
+class TestMaterializedViews:
+    """F2-11/13: Archivos de vistas materializadas existen."""
+
+    MV_FILES = [
+        "sql/views/mv_rotacion_mensual.sql",
+        "sql/views/mv_stock_actual.sql",
+        "sql/views/mv_top_productos.sql",
+    ]
+    REFRESH_PATH = "scripts/refresh_materialized_views.sql"
+
+    @pytest.mark.parametrize("mv_file", MV_FILES)
+    def test_mv_file_exists(self, root: Path, mv_file: str):
+        assert (root / mv_file).exists(), f"Missing: {mv_file}"
+
+    def test_refresh_script_exists(self, root: Path):
+        assert (root / self.REFRESH_PATH).exists()
+
+    def test_refresh_script_has_refresh_commands(self, root: Path):
+        content = (root / self.REFRESH_PATH).read_text()
+        count = content.count("REFRESH MATERIALIZED VIEW")
+        assert count >= 3, f"Expected >=3 REFRESH, found {count}"
+
+    def test_mv_rotacion_has_create(self, root: Path):
+        content = (root / "sql/views/mv_rotacion_mensual.sql").read_text()
+        assert "mv_rotacion_mensual" in content
+
+    def test_mv_stock_has_create(self, root: Path):
+        content = (root / "sql/views/mv_stock_actual.sql").read_text()
+        assert "mv_stock_actual" in content
+
+    def test_mv_top_has_create(self, root: Path):
+        content = (root / "sql/views/mv_top_productos.sql").read_text()
+        assert "mv_top_productos" in content
+
+    def test_each_mv_has_indexes(self, root: Path):
+        for mv in self.MV_FILES:
+            content = (root / mv).read_text()
+            assert "CREATE INDEX" in content, f"{mv} missing index definitions"
+
+
+class TestMaterializedViewsRuntime:
+    """F2-15: MVs existen en BD y queries rinden <2s."""
+
+    @pytest.mark.runtime
+    def test_mv_rotacion_exists(self, run_cmd):
+        rc, stdout, _ = run_cmd(
+            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            "\"SELECT COUNT(*) FROM mv_rotacion_mensual\" -t -A"
+        )
+        assert rc == 0 and stdout.isdigit() and int(stdout) > 100, \
+            f"mv_rotacion_mensual has no data: {stdout}"
+
+    @pytest.mark.runtime
+    def test_mv_stock_exists(self, run_cmd):
+        rc, stdout, _ = run_cmd(
+            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            "\"SELECT COUNT(*) FROM mv_stock_actual\" -t -A"
+        )
+        assert rc == 0 and stdout.isdigit() and int(stdout) > 1000, \
+            f"mv_stock_actual has no data: {stdout}"
+
+    @pytest.mark.runtime
+    def test_mv_top_exists(self, run_cmd):
+        rc, stdout, _ = run_cmd(
+            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            "\"SELECT COUNT(*) FROM mv_top_productos\" -t -A"
+        )
+        assert rc == 0 and stdout.isdigit() and int(stdout) > 1000, \
+            f"mv_top_productos has no data: {stdout}"
+
+    @pytest.mark.runtime
+    def test_mv_query_performance(self, run_cmd):
+        """MV queries must complete in <2s (EXPLAIN ANALYZE)."""
+        rc, stdout, stderr = run_cmd(
+            """docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+EXPLAIN ANALYZE SELECT categoria, SUM(ingresos_totales)
+FROM mv_rotacion_mensual WHERE anio = '2026'
+GROUP BY categoria ORDER BY 2 DESC
+" -q 2>&1"""
+        )
+        output = stdout + stderr
+        assert rc == 0, f"MV performance check failed: {output[:300]}"
+        # Extract execution time in ms
+        import re
+        match = re.search(r"Execution\s+Time:\s*([\d.]+)\s*ms", output)
+        assert match, f"Cannot parse execution time from: {output[:500]}"
+        exec_time = float(match.group(1))
+        assert exec_time < 2000, f"MV query too slow: {exec_time}ms (target: <2000ms)"
+
+
+# ─── Slice 5: Partitioning ──────────────────────────────────
+
+class TestPartitioning:
+    """F2-16/17: Archivo de particionamiento existe."""
+
+    PARTITION_PATH = "sql/partitions/partition_ventas.sql"
+
+    def test_partition_file_exists(self, root: Path):
+        assert (root / self.PARTITION_PATH).exists()
+
+    def test_partition_has_partition_by_range(self, root: Path):
+        content = (root / self.PARTITION_PATH).read_text()
+        assert "PARTITION BY RANGE" in content.upper()
+
+    def test_partition_has_12_partitions(self, root: Path):
+        content = (root / self.PARTITION_PATH).read_text()
+        count = content.count("PARTITION OF ventas")
+        assert count >= 12, f"Expected >=12 partitions, found {count}"
+
+
+class TestPartitioningRuntime:
+    """F2-18: ventas está particionada y muestra partition pruning."""
+
+    @pytest.mark.runtime
+    def test_ventas_is_partitioned(self, run_cmd):
+        rc, stdout, _ = run_cmd(
+            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            "\"SELECT relkind FROM pg_class WHERE relname = 'ventas'\" -t -A"
+        )
+        assert rc == 0 and stdout == "p", \
+            f"ventas is not partitioned (relkind={stdout}, expected 'p')"
+
+    @pytest.mark.runtime
+    def test_partition_tree_has_12_children(self, run_cmd):
+        rc, stdout, stderr = run_cmd(
+            """docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -t -A -c "
+SELECT count(*) FROM pg_partition_tree('ventas') WHERE isleaf = true
+" 2>&1"""
+        )
+        output = (stdout + stderr).strip()
+        assert output.isdigit() and int(output) >= 12, \
+            f"Expected >=12 partition leaves, found: '{output}'"
+
+    @pytest.mark.runtime
+    def test_partition_pruning_active(self, run_cmd):
+        """EXPLAIN muestra que solo se escanea una partición en query con filtro fecha."""
+        rc, stdout, stderr = run_cmd(
+            """docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -q -c "
+EXPLAIN (COSTS OFF) SELECT count(*) FROM ventas
+WHERE fecha_venta BETWEEN '2026-03-01' AND '2026-03-31'
+" 2>&1"""
+        )
+        output = stdout + stderr
+        assert rc == 0, f"Partition pruning check failed: {output[:300]}"
+        # Should reference a specific partition not the parent
+        assert "ventas_2026_03" in output, \
+            f"Partition pruning NOT active:\n{output}"

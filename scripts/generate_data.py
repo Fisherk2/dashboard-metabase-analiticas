@@ -28,8 +28,19 @@ from faker import Faker
 load_dotenv()
 
 # ─── Connection Configuration ────────────────────────────────
+# When running inside Docker network, use "postgres" as host;
+# when running from host, use "localhost" (requires PG port exposed).
+_DB_HOST = os.getenv("MB_DB_HOST", "localhost")
+if _DB_HOST == "postgres":
+    # Check if we can resolve "postgres" — if not, fall back to localhost
+    import socket
+    try:
+        socket.getaddrinfo("postgres", 5432)
+    except socket.gaierror:
+        _DB_HOST = "localhost"
+
 DB_CONFIG = {
-    "host": os.getenv("MB_DB_HOST", "localhost"),
+    "host": _DB_HOST,
     "port": int(os.getenv("MB_DB_PORT", 5432)),
     "dbname": os.getenv("MB_DB_DBNAME", "ecommerce"),
     "user": os.getenv("MB_DB_USER", "ecommerce"),
@@ -116,11 +127,13 @@ class DataGenerator:
         self.cur.execute("BEGIN")
         for _ in range(self.num["proveedores"]):
             self.cur.execute(
-                "INSERT INTO proveedores (nombre, contacto, email) VALUES (%s, %s, %s)",
-                (self.fake.company(), self.fake.name(), self.fake.unique.email())
+                "INSERT INTO proveedores (nombre, contacto, email) VALUES (%s, %s, %s) ON CONFLICT (email) DO NOTHING",
+                (self.fake.company(), self.fake.name(), self.fake.email())
             )
         self.conn.commit()
-        self._log(f"✓ proveedores: {self.num['proveedores']} registros")
+        self.cur.execute("SELECT COUNT(*) FROM proveedores")
+        count = self.cur.fetchone()[0]
+        self._log(f"✓ proveedores: {count} registros")
 
     def _seed_productos(self) -> None:
         """Insert 5K products with Pareto distribution across categories.
@@ -149,7 +162,7 @@ class DataGenerator:
                     categoria_id, proveedor_id, fecha_creacion)
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
                 (
-                    self.fake.unique.word().capitalize(),
+                    self.fake.word().capitalize() + f" {random.randint(1, 999)}",
                     self.fake.sentence(nb_words=8),
                     round(random.uniform(5.0, 5000.0), 2),
                     random.randint(0, 500),
@@ -170,10 +183,11 @@ class DataGenerator:
         for _ in range(self.num["clientes"]):
             self.cur.execute(
                 """INSERT INTO clientes (nombre, email, direccion, fecha_registro)
-                   VALUES (%s, %s, %s, %s)""",
+                   VALUES (%s, %s, %s, %s)
+                   ON CONFLICT (email) DO NOTHING""",
                 (
                     self.fake.name(),
-                    self.fake.unique.email(),
+                    self.fake.email(),
                     self.fake.address(),
                     self.fake.date_time_between(
                         start_date="-3y", end_date="now"
@@ -181,7 +195,9 @@ class DataGenerator:
                 )
             )
         self.conn.commit()
-        self._log(f"✓ clientes: {self.num['clientes']} registros")
+        self.cur.execute("SELECT COUNT(*) FROM clientes")
+        count = self.cur.fetchone()[0]
+        self._log(f"✓ clientes: {count} registros")
 
     def _seed_tiempo(self) -> None:
         """Insert 365 days (2026 full year) with computed attributes."""
@@ -308,17 +324,18 @@ class DataGenerator:
         self.cur.execute("SELECT id FROM proveedores")
         proveedor_ids = [row[0] for row in self.cur.fetchall()]
 
-        # Use ~10 daily snapshots per product on average
+        # Target ~10 records per product (50K for 5K products)
+        snaps_per_product = max(1, self.num["inventario"] // len(productos))
         total_records = min(
             self.num["inventario"],
-            len(productos) * len(tiempo_ids)
+            len(productos) * snaps_per_product
         )
 
         self.cur.execute("BEGIN")
         batch_count = 0
         for prod_id, stock_actual in productos:
             stock_inicial = stock_actual
-            for _ in range(random.randint(1, 3)):
+            for _ in range(snaps_per_product):
                 if batch_count >= total_records:
                     break
                 stock_final = max(0, stock_inicial + random.randint(-20, 20))

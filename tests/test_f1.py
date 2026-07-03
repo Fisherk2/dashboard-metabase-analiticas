@@ -68,16 +68,14 @@ class TestComposePostgres:
         assert "metabase-postgres" in content, "Expected container_name metabase-postgres"
 
     def test_no_exposed_ports(self, run_cmd):
-        """PostgreSQL must NOT expose port 5432 to host (security)."""
+        """PostgreSQL port 5432 only exposed to localhost (127.0.0.1), not 0.0.0.0."""
         rc, stdout, _ = run_cmd("docker compose -f docker/docker-compose.yml config")
         assert rc == 0, "docker compose config failed"
 
         lines = stdout.splitlines()
-        # Find the postgres SERVICE block (not depends_on: postgres: inside metabase)
-        # Config output: services: \n  metabase: ... \n  postgres: \n ...
+        # Find the postgres SERVICE block
         pg_start = None
         for i, line in enumerate(lines):
-            # Service postgres is at 2-space indent; depends_on postgres at deeper indent
             if line.strip() == "postgres:" and not line.startswith("    "):
                 pg_start = i
                 break
@@ -87,11 +85,16 @@ class TestComposePostgres:
         pg_block = []
         for line in lines[pg_start + 1:]:
             if line and not line.startswith(" ") and ":" in line:
-                break  # next top-level key (networks:, volumes:)
+                break
             pg_block.append(line)
 
         block_text = "\n".join(pg_block)
-        assert "ports:" not in block_text, "PostgreSQL has exposed ports in config!"
+        # Allow localhost-only exposure (127.0.0.1:5432:5432) but not 0.0.0.0
+        if "ports:" in block_text:
+            # Verify it's only localhost
+            assert "127.0.0.1" in block_text and "0.0.0.0" not in block_text, (
+                "PostgreSQL must only be exposed on 127.0.0.1 (localhost), not 0.0.0.0"
+            )
 
     def test_healthcheck_exists(self):
         content = compose_content()
@@ -396,22 +399,23 @@ class TestRuntimeIntegration:
         assert "ok" in stdout.lower(), f"Unexpected health response: {stdout}"
 
     @pytest.mark.runtime
-    def test_port_5432_not_exposed(self, run_cmd):
-        """F1-11: PostgreSQL port 5432 must NOT be exposed to host."""
+    def test_port_5432_exposed_only_localhost(self, run_cmd):
+        """F2: PostgreSQL port 5432 only exposed to 127.0.0.1 (not 0.0.0.0)."""
         if not has_docker():
             pytest.skip("Docker not available")
 
         rc, stdout, stderr = run_cmd(
             "docker port metabase-postgres 2>&1"
         )
-        # docker port for a container without published ports returns empty + exit 0
         assert rc == 0, f"docker port failed: {stderr}"
-        assert stdout.strip() == "", \
-            f"PostgreSQL port should not be exposed, found: {stdout}"
+        assert "127.0.0.1:5432" in stdout, \
+            f"Expected 127.0.0.1:5432 in docker port output, got: {stdout}"
+        assert "0.0.0.0" not in stdout, \
+            f"Port must NOT be exposed to 0.0.0.0, got: {stdout}"
 
     @pytest.mark.runtime
-    def test_nc_port_5432_refused(self, run_cmd):
-        """F1-11: nc should report connection refused to localhost:5432."""
+    def test_nc_port_5432_connectable(self, run_cmd):
+        """F2: Port 5432 should be connectable from host (on localhost)."""
         if not has_docker():
             pytest.skip("Docker not available")
 
@@ -420,8 +424,5 @@ class TestRuntimeIntegration:
             pytest.skip("nc not installed; use docker port verification instead")
 
         rc, stdout, stderr = run_cmd("nc -zv localhost 5432 -w 2 2>&1")
-        # nc returns non-zero when connection refused
-        assert rc != 0, f"Port 5432 should be refused, but nc succeeded: {stdout}"
-        refused_indicators = ["refused", "failed", "Connection refused", "timed out"]
-        has_refused = any(ind in stdout.lower() for ind in refused_indicators)
-        assert has_refused, f"Expected 'connection refused' but got: {stdout}"
+        # nc returns 0 when connection succeeds
+        assert rc == 0, f"Port 5432 should be connectable, but nc failed: {stdout} {stderr}"
