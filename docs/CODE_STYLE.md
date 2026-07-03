@@ -139,3 +139,57 @@ def generate_products(n: int, conn: psycopg2.extensions.connection) -> None:
 | `METABASE_PORT`       | Puerto de Metabase               | `3000`                   |
 
 **Nunca** hardcodear estas variables en archivos SQL, Python, o YAML. Siempre usar `.env`.
+
+---
+
+## 5. Makefile
+
+### Convenciones
+
+- **Targets:** `kebab-case` (ej: `db-init`, `data-generate`, `mv-refresh`).
+- **Comentarios:** Cada target tiene un comentario `##` para `make help`.
+- **`.PHONY`:** Declarar todos los targets no-file como `.PHONY`.
+- **Variables:** Cargar `.env` con `include .env` — no hardcodear credenciales.
+- **Default:** `.DEFAULT_GOAL := help` — `make` sin args muestra ayuda.
+- **Agrupación:** Separar targets por sección con comentarios (Infrastructure, Database, Data, etc.).
+- **Destructivos:** Targets que eliminan datos incluyen `⚠️` en la descripción.
+
+### Ejemplo
+
+```makefile
+# Makefile — Dashboard Metabase + Colección Analítica
+
+include .env
+export
+
+DOCKER_COMPOSE = docker-compose
+PSQL = docker exec -it postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+.DEFAULT_GOAL := help
+
+help: ## Mostrar ayuda
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: up down db-shell data-generate
+
+up: ## Levantar PostgreSQL + Metabase
+	$(DOCKER_COMPOSE) up -d
+
+down: ## Detener servicios
+	$(DOCKER_COMPOSE) down
+
+db-shell: ## Conectar a psql interactivo
+	docker exec -it postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+data-generate: ## Generar datos sintéticos
+	python scripts/generate_data.py
+```
+
+### Checklist Pre-Commit (Makefile)
+
+- [ ] Todos los targets tienen comentario `##`.
+- [ ] `.PHONY` declarado para targets no-file.
+- [ ] Variables cargadas desde `.env` (no hardcodeadas).
+- [ ] `make help` lista todos los targets correctamente.
+- [ ] Targets destructivos tienen advertencia `⚠️`.

@@ -9,8 +9,8 @@
 
 | **Fase**                | **Objetivo**                                                    | **Entregables**                                                                                  | **Duración Estimada** |
 | ----------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------- |
-| **F0: Preparación**     | Configurar entorno base, convenciones y documentación inicial.  | Estructura de carpetas, `.gitignore`, `README.md` (borrador), `AGENTS.md`, `ARCHITECTURE.md`.    | 1 día                 |
-| **F1: Infraestructura** | Levantar servicios de PostgreSQL y Metabase con Docker.         | `docker-compose.yml`, credenciales seguras, conexión funcional entre Metabase y PostgreSQL.      | 1 día                 |
+| **F0: Preparación**     | Configurar entorno base, convenciones y documentación inicial.  | Estructura de carpetas, `.gitignore`, `README.md` (borrador), `AGENTS.md`, `ARCHITECTURE.md`, `Makefile`.    | 1 día                 |
+| **F1: Infraestructura** | Levantar servicios de PostgreSQL y Metabase con Docker.         | `docker-compose.yml`, credenciales seguras, conexión funcional entre Metabase y PostgreSQL, Makefile operativo.      | 1 día                 |
 | **F2: Núcleo**          | Implementar schema estrella, generar datos y optimizar queries. | Script `generate_data.py`, schema SQL, índices, vistas materializadas, particionamiento.         | 2 días                |
 | **F3: Interfaces**      | Configurar paneles en Metabase y validar queries.               | 3+ paneles en Metabase (rotación, stock, ventas), queries optimizadas.                           | 1 día                 |
 | **F4: Pruebas**         | Validar rendimiento, exportación y flujos completos.            | Resultados de `EXPLAIN ANALYZE`, pruebas de exportación, validación de paneles.                  | 1 día                 |
@@ -33,7 +33,8 @@
 | F0-02  | Configurar `.gitignore` para Python, SQL, Docker y Metabase.           | Fisherk2     | 0.5 horas      | Archivo `.gitignore` incluye patrones para `.env`, `*.pyc`, `*.log`, `data/`, etc.              |
 | F0-03  | Crear `README.md` inicial con descripción del proyecto y badges.       | Fisherk2     | 1 hora         | `README.md` incluye: título, descripción, stack tecnológico, badges, y enlaces a documentación. |
 | F0-04  | Crear `AGENTS.md` (este documento) y `ARCHITECTURE.md`.                | Fisherk2     | 2 horas        | Documentos completos y revisados.                                                               |
-| F0-05  | Configurar linters/formateadores para SQL y Python (opcional).         | Fisherk2     | 1 hora         | Configuración de `sqlfluff` (SQL) y `black`/`flake8` (Python) en pre-commit.                    |
+| F0-05  | Crear `Makefile` con targets para infraestructura, BD, datos y testing. | Fisherk2     | 1 hora         | `make help` lista todos los targets. `make setup` ejecuta flujo completo.                       |
+| F0-06  | Configurar linters/formateadores para SQL y Python (opcional).         | Fisherk2     | 1 hora         | Configuración de `sqlfluff` (SQL) y `black`/`flake8` (Python) en pre-commit.                    |
 
 
 **Dependencias:**

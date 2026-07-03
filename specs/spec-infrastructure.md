@@ -46,16 +46,17 @@ Levantar un entorno reproducible con PostgreSQL 15+ y Metabase OSS mediante Dock
 | `.env`                         | `/.env`                        | Credenciales (NO commitear)                |
 | `.env.example`                 | `/.env.example`                | Template de variables (SÍ commitear)       |
 | `.gitignore`                   | `/.gitignore`                  | Excluir `.env`, `*.pyc`, `data/`, `*.log`  |
+| `Makefile`                     | `/Makefile`                    | Automatización de comandos (ver [spec-makefile.md](spec-makefile.md)) |
 
 ---
 
 ## 4. Criterios de Aceptación
 
-- [ ] `docker-compose config` valida sin errores.
-- [ ] `docker-compose up -d` levanta ambos servicios.
+- [ ] `make validate` valida sin errores.
+- [ ] `make up` levanta ambos servicios.
 - [ ] PostgreSQL acepta conexiones desde Metabase (verificar en logs).
 - [ ] Metabase accesible en `http://localhost:3000`.
-- [ ] Datos persisten tras `docker-compose down && docker-compose up -d`.
+- [ ] Datos persisten tras `make down && make up`.
 - [ ] Puerto 5432 NO es accesible desde el host (solo red interna).
 - [ ] `.env` está en `.gitignore`.
 
@@ -72,25 +73,25 @@ Levantar un entorno reproducible con PostgreSQL 15+ y Metabase OSS mediante Dock
 
 ```bash
 # Validar configuración
-docker-compose config
+make validate
 
 # Levantar servicios
-docker-compose up -d
+make up
 
 # Verificar estado
-docker-compose ps
+make status
 
 # Verificar conexión PostgreSQL
-docker exec -it postgres pg_isready -U admin
+make db-check
 
 # Verificar logs
-docker-compose logs -f postgres
-docker-compose logs -f metabase
+make logs-pg
+make logs-mb
 
 # Verificar persistencia
-docker-compose down
-docker-compose up -d
-docker exec -it postgres psql -U admin -d ecommerce -c "SELECT 1;"
+make down
+make up
+make db-shell -c "SELECT 1;"
 ```
 
 ---
