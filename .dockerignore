@@ -1,0 +1,42 @@
+# .dockerignore — Dashboard Metabase + Colección Analítica
+# Excluye archivos del contexto de build de Docker
+# =============================================================================
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Tests
+tests/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentación (excepto README para contexto rápido)
+*.md
+!README.md
+!docs/
+
+# Datos
+data/
+metabase-data/
+*.sql.gz
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+assets/.archive/

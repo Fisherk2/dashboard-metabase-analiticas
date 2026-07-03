@@ -8,7 +8,7 @@ export
 # ─── Variables ───────────────────────────────────────────────
 DOCKER_COMPOSE = docker compose
 DOCKER_FILE = docker/docker-compose.yml
-PSQL = docker exec -it metabase-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+PSQL = docker exec -i metabase-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
 PYTHON = python
 PIP = pip
 
@@ -53,7 +53,7 @@ destroy: ## ⚠️ Detener y eliminar volúmenes (pierde datos)
 .PHONY: db-shell db-init db-reset db-check
 
 db-shell: ## Conectar a psql interactivo
-	$(PSQL)
+	docker exec -it metabase-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
 
 db-init: ## Ejecutar schema inicial (scripts/init.sql)
 	$(PSQL) -f scripts/init.sql
@@ -63,7 +63,7 @@ db-reset: ## ⚠️ Reiniciar BD desde cero (drop + recreate + init)
 	$(MAKE) db-init
 
 db-check: ## Verificar que PostgreSQL está listo
-	docker exec -it metabase-postgres pg_isready -U $(POSTGRES_USER)
+	docker exec -i metabase-postgres pg_isready -U $(POSTGRES_USER)
 
 # ─── Data Generation ─────────────────────────────────────────
 .PHONY: deps data-generate data-debug data-count
