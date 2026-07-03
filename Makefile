@@ -94,7 +94,10 @@ indexes-check: ## Listar todos los índices
 	$(PSQL) -c "SELECT indexname, tablename, indexdef FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename, indexname;"
 
 # ─── Testing ─────────────────────────────────────────────────
-.PHONY: test-queries test-integrity test-full
+.PHONY: test test-queries test-integrity test-full
+
+test: ## Ejecutar suite de tests (pytest)
+	$(PYTHON) -m pytest tests/ -v
 
 test-queries: ## Validar rendimiento de queries críticas (<2s)
 	@echo "=== Validación de queries (EXPLAIN ANALYZE) ==="
