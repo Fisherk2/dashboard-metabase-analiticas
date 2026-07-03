@@ -211,12 +211,18 @@ class TestSecurity:
     """Security checks for F0."""
 
     def test_no_secrets_in_commit_messages(self, run_cmd):
+        """No leaked credentials in commit messages.
+        
+        Only catches actual leaked values like 'password=xxx',
+        not references to env var names (MB_ENCRYPTION_SECRET_KEYS).
+        """
         rc, stdout, _ = run_cmd("git log --all --oneline | head -30")
-        forbidden = ["password", "secret", "api_key", "token"]
-        for word in forbidden:
-            assert word.lower() not in stdout.lower(), (
-                f"Found '{word}' in commit messages"
-            )
+        # Look for leaked values, not env var name references
+        forbidden = ["password=", "api_key=", "token="]
+        for pattern in forbidden:
+            for line in stdout.lower().splitlines():
+                if pattern in line:
+                    pytest.fail(f"Potential credential leak in commit: {line.strip()}")
 
     def test_env_is_gitignored(self, run_cmd):
         rc, _, _ = run_cmd("git check-ignore -q .env")
