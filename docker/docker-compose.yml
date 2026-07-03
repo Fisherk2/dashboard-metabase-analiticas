@@ -1,7 +1,6 @@
 # docker-compose.yml — PostgreSQL + Metabase
 # Full service configuration in F1: Infraestructura
 # See specs/spec-infrastructure.md for details
-version: "3.8"
 services:
   # PostgreSQL 15+ analytical database
   postgres:
