@@ -288,9 +288,12 @@ make down && make up && make status                # sin errores
 
 ---
 
-## 10. Siguiente Fase
+## 10. Estado Actual y Siguiente Fase
 
-**F2: Núcleo** — Siguiente fase del proyecto. Alcance:
+**F1: Infraestructura** — ✅ COMPLETADO (5 commits atómicos desde plan)
+**F2: Núcleo** — 📋 LISTO PARA PLANIFICAR
+
+**F2: Núcleo** — Próxima fase del proyecto. Alcance:
 - `scripts/init.sql` con star schema (8+ tablas, 5 dimensiones + 3 hechos)
 - `scripts/generate_data.py` con Python + Faker (100K ventas, 5K productos)
 - `sql/indexes/` con índices críticos (7+ índices B-tree en FK)

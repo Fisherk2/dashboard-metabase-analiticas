@@ -1,21 +1,21 @@
 # Workflow – Dashboard Metabase + Colección Analítica para E-commerce v1.0
 
-**Fecha:** 2026-07-02 | **Autor:** Fisherk2 | **Metodología:** Iterativo
+**Fecha:** 2026-07-03 | **Autor:** Fisherk2 | **Metodología:** Iterativo
 
 ---
 
 ## 1. Visión de Fases
 
 
-| **Fase**                | **Objetivo**                                                    | **Entregables**                                                                                  | **Duración Estimada** |
-| ----------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------- |
-| **F0: Preparación**     | Configurar entorno base, convenciones y documentación inicial.  | Estructura de carpetas, `.gitignore`, `README.md` (borrador), `AGENTS.md`, `ARCHITECTURE.md`, `Makefile`.    | 1 día                 |
-| **F1: Infraestructura** | Levantar servicios de PostgreSQL y Metabase con Docker.         | `docker-compose.yml`, credenciales seguras, conexión funcional entre Metabase y PostgreSQL, Makefile operativo.      | 1 día                 |
-| **F2: Núcleo**          | Implementar schema estrella, generar datos y optimizar queries. | Script `generate_data.py`, schema SQL, índices, vistas materializadas, particionamiento.         | 2 días                |
-| **F3: Interfaces**      | Configurar paneles en Metabase y validar queries.               | 3+ paneles en Metabase (rotación, stock, ventas), queries optimizadas.                           | 1 día                 |
-| **F4: Pruebas**         | Validar rendimiento, exportación y flujos completos.            | Resultados de `EXPLAIN ANALYZE`, pruebas de exportación, validación de paneles.                  | 1 día                 |
-| **F5: Despliegue**      | Documentar el proyecto y preparar para portafolio.              | `README.md` final con badges, guías de usuario, capturas de pantalla, video tutorial (opcional). | 1 día                 |
-| **F6: Cierre**          | Revisión final y lecciones aprendidas.                          | Retrospectiva documentada, actualización de `AGENTS.md` y `WORKFLOW.md`.                         | 0.5 días              |
+| **Fase**                | **Estado**        | **Objetivo**                                                    | **Entregables**                                                                                  | **Duración**  |
+| ----------------------- | ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
+| **F0: Preparación**     | ✅ COMPLETADO      | Configurar entorno base, convenciones y documentación inicial.  | Estructura de carpetas, `.gitignore`, `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `Makefile`, `tests/test_f0.py` (72 tests). | 1 día         |
+| **F1: Infraestructura** | ✅ COMPLETADO      | Levantar servicios de PostgreSQL y Metabase con Docker.         | `docker-compose.yml`, credenciales seguras, conexión funcional, persistencia, tests/test_f1.py (67 tests).     | 1 día         |
+| **F2: Núcleo**          | 📋 LISTO PARA PLANIFICAR | Implementar schema estrella, generar datos y optimizar queries. | Script `generate_data.py`, schema SQL, índices, vistas materializadas, particionamiento.         | 2 días        |
+| **F3: Interfaces**      | ⏳ PENDIENTE       | Configurar paneles en Metabase y validar queries.               | 3+ paneles en Metabase (rotación, stock, ventas), queries optimizadas.                           | 1 día         |
+| **F4: Pruebas**         | ⏳ PENDIENTE       | Validar rendimiento, exportación y flujos completos.            | Resultados de `EXPLAIN ANALYZE`, pruebas de exportación, validación de paneles.                  | 1 día         |
+| **F5: Despliegue**      | ⏳ PENDIENTE       | Documentar el proyecto y preparar para portafolio.              | `README.md` final con badges, guías de usuario, capturas de pantalla.                            | 1 día         |
+| **F6: Cierre**          | ⏳ PENDIENTE       | Revisión final y lecciones aprendidas.                          | Retrospectiva documentada, actualización de `AGENTS.md` y `WORKFLOW.md`.                         | 0.5 días      |
 
 
 ---
@@ -27,14 +27,14 @@
 **Objetivo:** Establecer la base del proyecto con estructura clara y documentación inicial.
 
 
-| **ID** | **Tarea**                                                              | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                                                    |
-| ------ | ---------------------------------------------------------------------- | --------------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| F0-01  | Crear estructura de carpetas (`/docs`, `/scripts`, `/sql`, `/docker`). | Fisherk2     | 1 hora         | Estructura de carpetas validada y versionada en Git.                                            |
-| F0-02  | Configurar `.gitignore` para Python, SQL, Docker y Metabase.           | Fisherk2     | 0.5 horas      | Archivo `.gitignore` incluye patrones para `.env`, `*.pyc`, `*.log`, `data/`, etc.              |
-| F0-03  | Crear `README.md` inicial con descripción del proyecto y badges.       | Fisherk2     | 1 hora         | `README.md` incluye: título, descripción, stack tecnológico, badges, y enlaces a documentación. |
-| F0-04  | Crear `AGENTS.md` (este documento) y `ARCHITECTURE.md`.                | Fisherk2     | 2 horas        | Documentos completos y revisados.                                                               |
-| F0-05  | Crear `Makefile` con targets para infraestructura, BD, datos y testing. | Fisherk2     | 1 hora         | `make help` lista todos los targets. `make setup` ejecuta flujo completo.                       |
-| F0-06  | Configurar linters/formateadores para SQL y Python (opcional).         | Fisherk2     | 1 hora         | Configuración de `sqlfluff` (SQL) y `black`/`flake8` (Python) en pre-commit.                    |
+| **ID** | **Tarea**                                                              | **Estado**    | **DoD (Definition of Done)**                                                                    |
+| ------ | ---------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------- |
+| F0-01  | Crear estructura de carpetas (`/docs`, `/scripts`, `/sql`, `/docker`). | ✅ Completado  | Estructura de carpetas validada y versionada en Git.                                            |
+| F0-02  | Configurar `.gitignore` para Python, SQL, Docker y Metabase.           | ✅ Completado  | Archivo `.gitignore` incluye patrones para `.env`, `*.pyc`, `*.log`, `data/`, etc.              |
+| F0-03  | Crear `README.md` inicial con descripción del proyecto y badges.       | ✅ Completado  | `README.md` incluye: título, descripción, stack tecnológico, badges, y enlaces a documentación. |
+| F0-04  | Crear `AGENTS.md` y `ARCHITECTURE.md`.                                 | ✅ Completado  | Documentos completos y revisados.                                                               |
+| F0-05  | Crear `Makefile` con targets para infraestructura, BD, datos y testing.| ✅ Completado  | `make help` lista todos los targets. `make setup` ejecuta flujo completo.                       |
+| F0-06  | Crear `tests/test_f0.py` con 72 tests de validación.                  | ✅ Completado  | Tests estáticos pasan sin Docker. 72 tests verdes.                                              |
 
 
 **Dependencias:**
@@ -49,13 +49,18 @@
 **Objetivo:** Levantar un entorno reproducible con PostgreSQL y Metabase.
 
 
-| **ID** | **Tarea**                                                             | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                          |
-| ------ | --------------------------------------------------------------------- | --------------- | -------------- | --------------------------------------------------------------------- |
-| F1-01  | Crear `docker-compose.yml` con servicios para PostgreSQL y Metabase.  | Fisherk2     | 1 hora         | Archivo valida con `docker-compose config`.                           |
-| F1-02  | Configurar credenciales seguras en variables de entorno (`.env`).     | Fisherk2     | 0.5 horas      | `.env` incluye `POSTGRES_PASSWORD`, `POSTGRES_USER`, y `POSTGRES_DB`. |
-| F1-03  | Levantar servicios con `docker-compose up -d`.                        | Fisherk2     | 0.5 horas      | PostgreSQL y Metabase están en ejecución sin errores.                 |
-| F1-04  | Verificar conexión entre Metabase y PostgreSQL.                       | Fisherk2     | 0.5 horas      | Metabase muestra la base de datos PostgreSQL como opción de conexión. |
-| F1-05  | Configurar persistencia de datos en PostgreSQL (volúmenes de Docker). | Fisherk2     | 0.5 horas      | Datos persisten tras reiniciar contenedores.                          |
+| **ID** | **Tarea**                                                             | **Estado**    | **DoD (Definition of Done)**                                          |
+| ------ | --------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------- |
+| F1-01  | Completar `docker-compose.yml` con environment, ports, volumes, healthcheck, networks, restart, mem_limit. | ✅ Completado | `make validate` exit 0; ambos servicios con healthcheck/depends_on.   |
+| F1-02  | Extender `.env.example` con vars MB_DB_* y METABASE_SECRET_KEY.       | ✅ Completado | `.env.example` con 14+ vars, secciones comentadas.                    |
+| F1-03  | Crear `.dockerignore` en raíz.                                        | ✅ Completado | 15+ patrones excluyendo venv, tests, .env, git.                       |
+| F1-04  | Crear `docker-compose.override.yml` template.                         | ✅ Completado | Merge safe con compose. Renombrado a `.example` para evitar fugas.    |
+| F1-05  | Levantar servicios y verificar healthchecks.                          | ✅ Completado | `make up` exit 0; pg_isready healthy; Metabase Initialization Complete.|
+| F1-06  | Verificar API health de Metabase.                                     | ✅ Completado | `curl /api/health` retorna `{"status":"ok"}`.                         |
+| F1-07  | Verificar persistencia y aislamiento de red.                          | ✅ Completado | Tabla `_f1_test` persiste tras restart; puerto 5432 NO expuesto.      |
+| F1-08  | Crear `tests/test_f1.py` con suite automatizada.                      | ✅ Completado | 67 tests (61 estáticos + 6 runtime). Todos verdes.                    |
+| F1-09  | Code review + simplificación de código.                               | ✅ Completado | DRY has_docker, guard clauses, dead code removido.                    |
+| F1-10  | Revisión multi-eje (Tezcatlipoca) + fixes.                            | ✅ Completado | 10 observaciones corregidas en 5 commits atómicos.                    |
 
 
 **Dependencias:**
@@ -67,6 +72,7 @@
 ### Fase 2: Núcleo
 
 **Objetivo:** Implementar el schema estrella, generar datos sintéticos y optimizar queries.
+**Estado:** 📋 LISTO PARA PLANIFICAR (dependencias F0 + F1 cumplidas)
 
 
 | **ID** | **Tarea**                                                                        | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                                            |
@@ -221,6 +227,15 @@ graph TD
 - **F4 (Pruebas):** Requerida para F5.
 - **F5 (Despliegue):** Requerida para F6.
 
+**Leyenda:**
+
+- **F0 (Preparación):** Base para todas las fases.
+- **F1 (Infraestructura):** Requerida para F2, F3, F4, F5.
+- **F2 (Núcleo):** Requerida para F3, F4, F5.
+- **F3 (Interfaces):** Requerida para F4, F5.
+- **F4 (Pruebas):** Requerida para F5.
+- **F5 (Despliegue):** Requerida para F6.
+
 ---
 
 ## 4. Estrategia de Pruebas por Fase
@@ -245,8 +260,8 @@ graph TD
 
 | **Gate**                | **Artefacto a Revisar**               | **Checklist**      | **Participantes** | **Resultado** |
 | ----------------------- | ------------------------------------- | ------------------ | ----------------- | ------------- |
-| **F0: Preparación**     | Estructura de carpetas y `AGENTS.md`. | Ver detalle abajo. | Fisherk2          | Pendiente     |
-| **F1: Infraestructura** | `docker-compose.yml` y `.env`.        | Ver detalle abajo. | Fisherk2          | Pendiente     |
+| **F0: Preparación**     | Estructura de carpetas y `AGENTS.md`. | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
+| **F1: Infraestructura** | `docker-compose.yml` y `.env`.        | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F2: Núcleo**          | Schema, datos, índices, vistas.       | Ver detalle abajo. | Fisherk2          | Pendiente     |
 | **F3: Interfaces**      | Paneles en Metabase.                  | Ver detalle abajo. | Fisherk2          | Pendiente     |
 | **F4: Pruebas**         | Resultados de pruebas.                | Ver detalle abajo. | Fisherk2          | Pendiente     |
@@ -328,8 +343,8 @@ gantt
     title Cronograma del Proyecto
     dateFormat  YYYY-MM-DD
     section Fases
-    F0: Preparación          :a1, 2026-07-02, 1d
-    F1: Infraestructura     :a2, after a1, 1d
+    F0: Preparación          :done, a1, 2026-07-02, 1d
+    F1: Infraestructura     :done, a2, after a1, 1d
     F2: Núcleo              :a3, after a2, 2d
     F3: Interfaces          :a4, after a3, 1d
     F4: Pruebas             :a5, after a4, 1d
@@ -345,11 +360,12 @@ gantt
 ### Hitos Clave
 
 
-| **Hito**                   | **Fecha Estimada** | **Criterio**                                         |
-| -------------------------- | ------------------ | ---------------------------------------------------- |
-| **MVP Listo para Pruebas** | 2026-07-05         | Fases F0, F1, F2, F3 completadas.                    |
-| **MVP Validado**           | 2026-07-06         | Fases F4 completadas, todas las queries <2s.         |
-| **Proyecto Completado**    | 2026-07-07         | Fases F5 y F6 completadas, documentación finalizada. |
+| **Hito**                   | **Fecha Estimada** | **Criterio**                                                    |
+| -------------------------- | ------------------ | --------------------------------------------------------------- |
+| **Plan F2 listo**          | 2026-07-03         | Plan de F2 aprobado, dependencias F0+F1 verificadas.           |
+| **MVP Listo para Pruebas** | 2026-07-06         | Fases F0, F1, F2, F3 completadas.                              |
+| **MVP Validado**           | 2026-07-07         | Fases F4 completadas, todas las queries <2s.                   |
+| **Proyecto Completado**    | 2026-07-08         | Fases F5 y F6 completadas, documentación finalizada.           |
 
 
 ---
@@ -360,6 +376,7 @@ gantt
 | **Versión** | **Fecha**  | **Autor** | **Cambio**                         | **Lecciones Aprendidas**                                                                                                                                                                                                |
 | ----------- | ---------- | --------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0         | 2026-07-02 | Fisherk2  | Versión inicial del `WORKFLOW.md`. | Priorizar tareas críticas (F0, F1, F2, F3) para garantizar el MVP; Usar vistas materializadas para queries frecuentes mejora el rendimiento significativamente; Docker Compose simplifica la orquestación de servicios. |
+| 1.1         | 2026-07-03 | Fisherk2  | F0+F1 marcados como completados; F2 listo para planificar. | Vertical slicing reduce checkpoints con misma calidad; tests de runtime con marker permiten CI local sin Docker; named volumes eliminan problemas de permisos de bind mount. |
 
 
 ---
