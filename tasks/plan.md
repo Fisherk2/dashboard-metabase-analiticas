@@ -1,6 +1,6 @@
 # Plan de Ejecución — F1: Infraestructura
 
-**Fecha:** 2026-07-03 | **Autor:** Fisherk2 | **Fase:** F1
+**Fecha:** 2026-07-03 | **Autor:** Fisherk2 | **Fase:** F1 (✅ COMPLETADO)
 **Metodología:** Vertical slicing con checkpoints de calidad
 **Reemplaza:** F0 plan (preservado en git history, commit `2b0af1e`+)
 
@@ -290,13 +290,16 @@ make down && make up && make status                # sin errores
 
 ## 10. Siguiente Fase
 
-**F2: Núcleo** — Plan se generará tras completar F1. Alcance:
-- `scripts/init.sql` con star schema (8+ tablas)
+**F2: Núcleo** — Siguiente fase del proyecto. Alcance:
+- `scripts/init.sql` con star schema (8+ tablas, 5 dimensiones + 3 hechos)
 - `scripts/generate_data.py` con Python + Faker (100K ventas, 5K productos)
-- `sql/indexes/` con índices críticos
-- `sql/views/` con 3 vistas materializadas (`mv_rotacion_mensual`, etc.)
+- `sql/indexes/` con índices críticos (7+ índices B-tree en FK)
+- `sql/views/` con 3 vistas materializadas (`mv_rotacion_mensual`, `mv_stock_alertas`, `mv_top_productos`)
 - `sql/partitions/` con particionamiento de `ventas` por fecha
 - Tests: `EXPLAIN ANALYZE` <2s, integridad referencial
+
+**Dependencias:** Requiere F1 completado (PostgreSQL 15+ en ejecución).
+**Estimación:** ~2 días (según WORKFLOW.md)
 
 ---
 
