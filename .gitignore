@@ -188,4 +188,9 @@ local.gradle
 *.local
 *.override
 
+# Datos locales - Excluye datos generados y dumps de la base de datos
+data/
+*.sql.gz
+metabase-data/
+
 # Para añadir nueva regla: identificar categoría específica, evitar patrones demasiado amplios
