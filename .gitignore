@@ -122,7 +122,7 @@ node_modules/
 
 # Docker y Contenedores - Excluye configuraciones de contenedores y orquestación
 .docker/
-/docker-compose.override.yml
+/docker/docker-compose.override.yml
 *.kubeconfig
 kubeconfig*
 
