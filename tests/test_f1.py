@@ -39,11 +39,6 @@ def run_cmd():
     return _run
 
 
-def dedent_yaml(text: str) -> str:
-    """Remove common leading whitespace from YAML for assertion readability."""
-    return "\n".join(line.lstrip() for line in text.splitlines())
-
-
 # ─── Static helpers ──────────────────────────────────────────
 def compose_content() -> str:
     """Return the raw text of docker-compose.yml."""
