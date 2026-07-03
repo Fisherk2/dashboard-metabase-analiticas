@@ -25,10 +25,10 @@ tests/
 .gitignore
 .gitattributes
 
-# Documentación (excepto README para contexto rápido)
+# Documentación (excepto README y docs/ para contexto rápido)
 *.md
 !README.md
-!docs/
+!docs/**/*.md
 
 # Datos
 data/
