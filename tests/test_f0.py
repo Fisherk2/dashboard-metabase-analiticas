@@ -7,33 +7,10 @@ Verifica todos los criterios de aceptación del plan F0:
 - Slice 3: Automation (Makefile, requirements.txt)
 - Security: No secrets in repo
 """
-import os
 import subprocess
 from pathlib import Path
 
 import pytest
-
-# ─── Constants ───────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).parent.parent
-
-
-# ─── Fixtures ────────────────────────────────────────────────
-@pytest.fixture
-def root() -> Path:
-    """Absolute path to project root."""
-    return PROJECT_ROOT
-
-
-@pytest.fixture
-def run_cmd():
-    """Execute a shell command and return (returncode, stdout, stderr)."""
-    def _run(cmd: str, **kwargs) -> tuple:
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, cwd=PROJECT_ROOT, **kwargs
-        )
-        return result.returncode, result.stdout.strip(), result.stderr.strip()
-    return _run
-
 
 # ─── Slice 1: Foundation ────────────────────────────────────
 class TestDirectoryStructure:

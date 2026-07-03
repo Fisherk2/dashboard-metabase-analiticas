@@ -7,6 +7,8 @@ Verifica todos los criterios de aceptación del plan F1:
 - Slice 3: Integration & Resilience (persistence, port isolation)
 - Security: Port isolation, secrets management
 """
+import functools
+import os
 import subprocess
 from pathlib import Path
 
@@ -26,30 +28,13 @@ PROJECT_ROOT = Path(__file__).parent.parent
 COMPOSE_FILE = PROJECT_ROOT / "docker" / "docker-compose.yml"
 ENV_EXAMPLE = PROJECT_ROOT / ".env.example"
 DOCKERIGNORE = PROJECT_ROOT / ".dockerignore"
-OVERRIDE_FILE = PROJECT_ROOT / "docker" / "docker-compose.override.yml"
-
-
-# ─── Fixtures ────────────────────────────────────────────────
-@pytest.fixture
-def root() -> Path:
-    """Absolute path to project root."""
-    return PROJECT_ROOT
-
-
-@pytest.fixture
-def run_cmd():
-    """Execute a shell command and return (returncode, stdout, stderr)."""
-    def _run(cmd: str, **kwargs) -> tuple:
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, cwd=PROJECT_ROOT, **kwargs
-        )
-        return result.returncode, result.stdout.strip(), result.stderr.strip()
-    return _run
+OVERRIDE_FILE = PROJECT_ROOT / "docker" / "docker-compose.override.yml.example"
 
 
 # ─── Static helpers ──────────────────────────────────────────
+@functools.lru_cache(maxsize=1)
 def compose_content() -> str:
-    """Return the raw text of docker-compose.yml."""
+    """Return the raw text of docker-compose.yml (cached)."""
     return COMPOSE_FILE.read_text()
 
 
@@ -171,6 +156,8 @@ class TestComposeMetabase:
         assert "MB_DB_USER" in metabase_section, "Missing MB_DB_USER env var"
         assert "MB_DB_DBNAME" in metabase_section, "Missing MB_DB_DBNAME env var"
         assert "MB_DB_PORT" in metabase_section, "Missing MB_DB_PORT env var"
+        assert "MB_ENCRYPTION_SECRET_KEYS" in metabase_section, \
+            "Missing MB_ENCRYPTION_SECRET_KEYS env var"
 
 
 class TestComposeTopLevel:
@@ -211,7 +198,7 @@ class TestEnvExampleExtended:
         "POSTGRES_DB",
         "POSTGRES_PORT",
         "METABASE_PORT",
-        "METABASE_SECRET_KEY",
+        "MB_ENCRYPTION_SECRET_KEYS",
         "MB_DB_TYPE",
         "MB_DB_DBNAME",
         "MB_DB_PORT",
@@ -275,16 +262,23 @@ class TestDockerignore:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Slice 1: docker-compose.override.yml
+# Slice 1: docker-compose.override.yml.example
 # ═══════════════════════════════════════════════════════════════
 class TestOverrideCompose:
-    """F1-04: docker-compose.override.yml template exists."""
+    """F1-04: docker-compose.override.yml.example template exists."""
 
-    def test_override_exists(self):
-        assert OVERRIDE_FILE.exists(), "docker-compose.override.yml not found"
+    def test_override_template_exists(self):
+        assert OVERRIDE_FILE.exists(), \
+            "docker/docker-compose.override.yml.example not found"
+
+    def test_override_is_not_tracked_by_git(self, run_cmd):
+        """The real override file (without .example) must be gitignored."""
+        rc, _, _ = run_cmd("git check-ignore docker/docker-compose.override.yml")
+        assert rc == 0, \
+            "docker/docker-compose.override.yml is not gitignored!"
 
     def test_override_is_valid_yaml(self, run_cmd):
-        """Override must merge cleanly with main compose."""
+        """Override template must merge cleanly with main compose."""
         rc, stdout, stderr = run_cmd(
             f"docker compose -f {COMPOSE_FILE} -f {OVERRIDE_FILE} config"
         )
@@ -292,7 +286,7 @@ class TestOverrideCompose:
 
     def test_override_has_services(self):
         content = OVERRIDE_FILE.read_text()
-        assert "services:" in content, "override missing services key"
+        assert "services:" in content, "override example missing services key"
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -347,14 +341,12 @@ class TestRuntimeServices:
         if not has_docker():
             pytest.skip("Docker not available")
 
-        rc, stdout, stderr = run_cmd(
-            "docker ps --filter name=metabase --format '{{.Status}}'",
-        )
-        assert rc == 0, f"docker ps failed: {stderr}"
-        states = stdout.splitlines()
-        assert len(states) == 2, f"Expected 2 containers, found {len(states)}"
-        for state in states:
-            assert "Up" in state, f"Container not running: {state}"
+        for container in ["metabase-postgres", "metabase-app"]:
+            rc, stdout, stderr = run_cmd(
+                f"docker ps --filter name=^{container}$ --format '{{{{.Status}}}}'",
+            )
+            assert rc == 0, f"docker ps for {container} failed: {stderr}"
+            assert "Up" in stdout, f"{container} is not running: {stdout}"
 
     @pytest.mark.runtime
     def test_postgres_accepts_connections(self, run_cmd):
@@ -362,8 +354,9 @@ class TestRuntimeServices:
         if not has_docker():
             pytest.skip("Docker not available")
 
+        pg_user = os.environ.get("POSTGRES_USER", "ecommerce")
         rc, stdout, stderr = run_cmd(
-            "docker exec -i metabase-postgres pg_isready -U ecommerce-fish"
+            f"docker exec -i metabase-postgres pg_isready -U {pg_user}"
         )
         assert rc == 0, f"pg_isready failed: {stderr}"
         assert "accepting connections" in stdout.lower(), \
@@ -421,6 +414,10 @@ class TestRuntimeIntegration:
         """F1-11: nc should report connection refused to localhost:5432."""
         if not has_docker():
             pytest.skip("Docker not available")
+
+        nc_rc, _, _ = run_cmd("which nc 2>/dev/null || command -v nc")
+        if nc_rc != 0:
+            pytest.skip("nc not installed; use docker port verification instead")
 
         rc, stdout, stderr = run_cmd("nc -zv localhost 5432 -w 2 2>&1")
         # nc returns non-zero when connection refused
