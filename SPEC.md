@@ -22,30 +22,47 @@ Build a reproducible **analytical dashboard** connected to PostgreSQL that visua
 | Python | 3.8+ | Synthetic data generation |
 | Faker | Latest | Realistic fake data |
 | psycopg2 | Latest | PostgreSQL adapter for Python |
+| GNU Make | 4.0+ | Task automation (Makefile) |
 
 ## Commands
 
+All commands are available via `make` (see **[specs/spec-makefile.md](specs/spec-makefile.md)** for full reference).
+
 ```bash
+# Quick Start
+make setup                            # Full setup: deps + up + db-init + data-generate
+make help                             # List all available commands
+
 # Infrastructure
-docker-compose up -d                    # Start PostgreSQL + Metabase
-docker-compose down                     # Stop all services
-docker-compose logs -f postgres         # View PostgreSQL logs
+make up                               # Start PostgreSQL + Metabase
+make down                             # Stop all services
+make destroy                          # Stop + delete volumes (⚠️ loses data)
+make status                           # Check service status
 
 # Database
-docker exec -it postgres psql -U admin -d ecommerce  # Connect to DB
-psql -h localhost -p 5432 -U admin -d ecommerce -f scripts/init.sql  # Run schema
+make db-shell                         # Open psql interactive session
+make db-init                          # Run schema initialization
+make db-reset                         # ⚠️ Drop + recreate + init.sql
 
 # Data Generation
-pip install -r scripts/requirements.txt  # Install Python dependencies
-python scripts/generate_data.py          # Generate synthetic data
-python scripts/generate_data.py --debug  # Run with debug logging
+make deps                             # Install Python dependencies
+make data-generate                    # Generate synthetic data
+make data-debug                       # Generate with verbose logging
+make data-count                       # Count records per table
 
-# Materialized Views
-psql -h localhost -p 5432 -U admin -d ecommerce -f scripts/refresh_materialized_views.sql
+# SQL Optimization
+make mv-refresh                       # Refresh materialized views
+make indexes-check                    # List all indexes
 
-# Validation
-docker-compose config                    # Validate docker-compose.yml
-EXPLAIN ANALYZE <query>;                 # Validate query performance in psql
+# Testing
+make test-queries                     # Validate query performance (<2s)
+make test-integrity                   # Validate referential integrity
+make test-full                        # Run all tests
+
+# Utilities
+make clean                            # Remove __pycache__, *.pyc, logs
+make logs                             # View all service logs
+make logs-pg                          # View PostgreSQL logs only
 ```
 
 ## Project Structure
@@ -54,6 +71,7 @@ EXPLAIN ANALYZE <query>;                 # Validate query performance in psql
 /
 ├── AGENTS.md                       # Lean project index (links to all docs)
 ├── SPEC.md                         # This file — central specification
+├── Makefile                        # Task automation (make help for all commands)
 ├── README.md                       # User-facing documentation + badges
 ├── .env                            # Environment variables (NOT committed)
 ├── .gitignore                      # Git ignore patterns
@@ -76,6 +94,7 @@ EXPLAIN ANALYZE <query>;                 # Validate query performance in psql
 │   ├── spec-data-generation.md     # Python data generation
 │   ├── spec-sql-optimization.md    # Query optimization
 │   ├── spec-metabase-dashboards.md # Dashboard configuration
+│   ├── spec-makefile.md            # Makefile task automation
 │   └── adr/                        # Architecture Decision Records
 │       ├── adr-001-postgresql.md
 │       ├── adr-002-metabase.md

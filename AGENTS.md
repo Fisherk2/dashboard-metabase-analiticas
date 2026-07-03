@@ -29,6 +29,7 @@ Panel visual conectado a PostgreSQL que muestra KPIs de inventario, rotación y 
 | [spec-data-generation.md](specs/spec-data-generation.md) | Python + Faker synthetic data |
 | [spec-sql-optimization.md](specs/spec-sql-optimization.md) | Materialized views, partitioning, indexes |
 | [spec-metabase-dashboards.md](specs/spec-metabase-dashboards.md) | Dashboard panels, filters, export |
+| [spec-makefile.md](specs/spec-makefile.md) | Makefile task automation |
 
 ## Architecture Decision Records (`specs/adr/`)
 
