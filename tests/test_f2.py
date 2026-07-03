@@ -182,8 +182,95 @@ class TestCheckConstraints:
             )
 
 
+class TestFactTables:
+    """F2-02: init.sql define 4 tablas de hechos."""
+
+    INIT_SQL_PATH = "scripts/init.sql"
+
+    @pytest.mark.parametrize("table", [
+        "ventas",
+        "inventario",
+        "devoluciones",
+        "logistica",
+    ])
+    def test_fact_table_exists(self, root: Path, table: str):
+        """Cada tabla de hecho declarada con CREATE TABLE."""
+        content = (root / self.INIT_SQL_PATH).read_text()
+        assert re.search(
+            rf"CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?{table}\s*\(",
+            content, re.IGNORECASE
+        ), f"Missing CREATE TABLE for fact table: {table}"
+
+    def test_total_tables(self, root: Path):
+        """10 tablas en total (6 dim + 4 hechos)."""
+        content = (root / self.INIT_SQL_PATH).read_text()
+        all_tables = [
+            "categorias", "proveedores", "productos", "clientes",
+            "tiempo", "promociones", "ventas", "inventario",
+            "devoluciones", "logistica",
+        ]
+        create_count = sum(
+            1 for t in all_tables
+            if re.search(rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{t}\s*\(", content, re.IGNORECASE)
+        )
+        assert create_count == 10, f"Expected 10 tables, found {create_count}"
+
+    def test_schema_section_headers(self, root: Path):
+        """init.sql tiene secciones delimitadas para DIMENSIONES y HECHOS."""
+        content = (root / self.INIT_SQL_PATH).read_text()
+        assert "HECHOS" in content.upper(), "Missing HECHOS section header"
+
+    @pytest.mark.parametrize("table,expected_column", [
+        ("ventas", "cantidad"),
+        ("ventas", "precio_unitario"),
+        ("ventas", "total"),
+        ("ventas", "fecha_venta"),
+        ("inventario", "stock_inicial"),
+        ("inventario", "stock_final"),
+        ("devoluciones", "motivo"),
+        ("logistica", "estado"),
+        ("logistica", "metodo_envio"),
+    ])
+    def test_fact_has_critical_column(self, root: Path, table: str, expected_column: str):
+        """Tablas de hechos tienen columnas críticas de negocio."""
+        content = (root / self.INIT_SQL_PATH).read_text()
+        blocks = re.findall(
+            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
+            content, re.IGNORECASE | re.DOTALL
+        )
+        if blocks:
+            assert expected_column in blocks[0], (
+                f"Table '{table}' missing critical column '{expected_column}'"
+            )
+
+
+class TestFactCheckConstraints:
+    """CHECK constraints en tablas de hechos."""
+
+    INIT_SQL_PATH = "scripts/init.sql"
+
+    @pytest.mark.parametrize("table,constraint_pattern", [
+        ("ventas", "cantidad > 0"),
+        ("ventas", "precio_unitario > 0"),
+        ("inventario", "stock_inicial >= 0"),
+        ("inventario", "stock_final >= 0"),
+        ("devoluciones", "cantidad > 0"),
+    ])
+    def test_fact_check_constraint_exists(self, root: Path, table: str, constraint_pattern: str):
+        """CHECK constraints definidos en tablas de hechos."""
+        content = (root / self.INIT_SQL_PATH).read_text()
+        blocks = re.findall(
+            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
+            content, re.IGNORECASE | re.DOTALL
+        )
+        if blocks:
+            assert constraint_pattern in blocks[0].lower(), (
+                f"Missing CHECK constraint '{constraint_pattern}' in table '{table}'"
+            )
+
+
 class TestForeignKeys:
-    """Foreign Keys definidas en tablas de dimensión con referencias."""
+    """Foreign Keys definidas en tablas con referencias."""
 
     INIT_SQL_PATH = "scripts/init.sql"
 
@@ -191,9 +278,13 @@ class TestForeignKeys:
         ("productos", "categoria_id", "categorias"),
         ("productos", "proveedor_id", "proveedores"),
         ("promociones", "categoria_id", "categorias"),
+        ("ventas", "producto_id", "productos"),
+        ("ventas", "cliente_id", "clientes"),
+        ("inventario", "producto_id", "productos"),
+        ("devoluciones", "venta_id", "ventas"),
     ])
     def test_fk_reference_exists(self, root: Path, table: str, column: str, references: str):
-        """FKs de dimensiones referencian tabla padre."""
+        """FKs referencian tabla padre."""
         content = (root / self.INIT_SQL_PATH).read_text()
         # Check for REFERENCES clause
         assert re.search(
