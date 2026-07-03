@@ -1,0 +1,6 @@
+# Dashboard Metabase — Dependencias Python
+# Uso: pip install -r scripts/requirements.txt
+
+faker>=18.0
+psycopg2-binary>=2.9
+python-dotenv>=1.0
