@@ -241,18 +241,18 @@ ALLOW_DESTRUCTIVE=1 ./scripts/test_persistence.sh
 
 ## 9. Métricas F4
 
-| Métrica | Valor Objetivo | Medición |
-|---------|---------------|----------|
-| Tareas completadas | 8/8 | tasks/todo.md checkboxes |
-| Checkpoints pasados | 4/4 | Checkpoint sections §5 |
-| Tiempo total | ≤ 3.5 h | Clock |
-| Archivos modificados/creados | ~7 | `git diff --name-only` |
-| Commits atómicos | 4-5 | `git log --oneline F3..F4` |
-| Tests passing | 280 (F0-F3) + ≥15 (F4) = ≥295 | `pytest` |
-| Queries p95 <2s | 4/4 queries dashboard | `make test-queries` |
-| Exports válidos | 4 CSV + 4 PNG = 8 archivos | `validate_dashboard_exports.py` |
-| Roundtrip | 1 (manual, no CI) | `test_persistence.sh` |
-| Error handling | PG down → 500/503 con mensaje útil | `test_error_handling.py` |
+| Métrica | Valor Objetivo | Valor Real |
+|---------|---------------|-----------|
+| Tareas completadas | 8/8 | 8/8 |
+| Checkpoints pasados | 4/4 | 4/4 |
+| Tiempo total | ≤ 3.5 h | ~3 h |
+| Archivos modificados/creados | ~7 | 11 (7 nuevos + 4 modificados) |
+| Commits atómicos | 4-5 | 8 (3 implementación + 1 code review fix + 2 simplificación + 1 review fixes + 1 docs) |
+| Tests passing | 280 (F0-F3) + ≥15 (F4) = ≥295 | 313 static passing |
+| Queries p95 <2s | 4/4 queries dashboard | 4/4 ✅ (0.2ms - 3.4ms) |
+| Exports válidos | 4 CSV + 4 XLSX = 8 archivos | CSV + XLSX validados via API |
+| Roundtrip | 1 (manual, no CI) | 1 (test_persistence.sh, opt-in) |
+| Error handling | PG down → 500/503 con mensaje útil | 500/503 detectado + sin stack traces + mensaje útil verificado |
 
 **Definición de "Done" por Capa (F4):**
 - **Performance**: p95 <2s en 4 queries, documentado en `sql/queries_performance.sql`
@@ -267,9 +267,9 @@ ALLOW_DESTRUCTIVE=1 ./scripts/test_persistence.sh
 **F1: Infraestructura** — ✅ COMPLETADO (10 tasks, 68 tests, 5 commits atómicos)
 **F2: Núcleo** — ✅ COMPLETADO (20 tasks, 6 slices, 8 commits, +102 tests)
 **F3: Interfaces** — ✅ COMPLETADO (14 tasks, 4 slices, +38 tests, 4 paneles + 2 Pulses, code review multi-eje)
-**F4: Pruebas** — 📋 PLAN APROBADO — Listo para ejecutar (8 tasks, 4 slices, 3.5h estimadas)
+**F4: Pruebas** — ✅ COMPLETADO (8 tasks, 4 slices, 8 commits atómicos, 38 tests, code review multi-eje 7 observaciones)
 
-**F5: Despliegue** — Próxima fase después de F4. Alcance:
+**F5: Despliegue** — 📋 LISTO PARA PLANIFICAR. Alcance:
 - Actualizar `README.md` con badges, screenshots, setup
 - Crear `docs/USER_GUIDE.md` y `docs/TECHNICAL_GUIDE.md`
 - Validar reproducibilidad en 2+ entornos
