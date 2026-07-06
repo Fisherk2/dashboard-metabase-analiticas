@@ -18,16 +18,15 @@ import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import requests
 from dotenv import load_dotenv
 
-import time
-
 # ─── Constants ────────────────────────────────────────────────
-METABASE_URL = "http://localhost:3000"
+METABASE_URL = os.getenv("METABASE_URL", "http://localhost:3000")
 POSTGRES_HOST = "postgres"
 POSTGRES_PORT = 5432
 
@@ -160,7 +159,7 @@ class MetabaseSetup:
 
     def __init__(self, base_url: str = METABASE_URL):
         self.base_url = base_url.rstrip("/")
-        self.session_token: Optional[str] = None
+        self.session_token: str | None = None
         self._headers: dict[str, str] = {"Content-Type": "application/json"}
 
     # ── Authentication & Setup ──────────────────────────────
@@ -182,7 +181,7 @@ class MetabaseSetup:
                     log.info("Metabase is ready (attempt %d)", attempt)
                     return
             except requests.exceptions.ConnectionError:
-                pass
+                log.debug("Connection refused (attempt %d/%d)", attempt, max_retries)
             if attempt < max_retries:
                 log.info(
                     "Waiting for Metabase... (attempt %d/%d)",
@@ -329,7 +328,13 @@ class MetabaseSetup:
         data = response.json()
         if isinstance(data, list):
             return data
-        return data.get("data", [])
+        if isinstance(data, dict) and "data" in data:
+            return data["data"]
+        raise MetabaseApiError(
+            f"GET {endpoint}",
+            response.status_code,
+            f"Unexpected response structure (not list or dict with 'data' key)",
+        )
 
     def _get_databases(self) -> list[dict[str, Any]]:
         """Return list of configured database connections."""
@@ -404,6 +409,14 @@ class MetabaseSetup:
             if q.get("name") == name:
                 return q
         return None
+
+    def get_questions_by_names(
+        self, names: list[str],
+    ) -> list[dict[str, Any]]:
+        """Return questions whose name matches any in the given list."""
+        all_questions = self._get_questions()
+        name_set = set(names)
+        return [q for q in all_questions if q.get("name") in name_set]
 
     def _get_first_database_id(self) -> int:
         """Return the ID of the first (and expected only) database connection."""
@@ -616,14 +629,15 @@ class MetabaseSetup:
 
         # Build dashcards array with temporary negative IDs
         dashcards = []
+        valid_index = 0
         for i, card_data in enumerate(cards[:4]):
             card_id = card_data.get("id")
             if not card_id:
                 log.warning("Card at index %d has no ID — skipping", i)
                 continue
-            row, col, sx, sy = DASHBOARD_LAYOUT[i]
+            row, col, sx, sy = DASHBOARD_LAYOUT[valid_index]
             dashcards.append({
-                "id": -(i + 1),  # temporary negative ID for new dashcards
+                "id": -(valid_index + 1),  # temporary negative ID for new dashcards
                 "card_id": card_id,
                 "row": row,
                 "col": col,
@@ -633,6 +647,7 @@ class MetabaseSetup:
                 "parameter_mappings": [],
                 "visualization_settings": {},
             })
+            valid_index += 1
 
         if not dashcards:
             log.warning("No cards to add to dashboard")
@@ -677,6 +692,14 @@ class MetabaseSetup:
         pulses = self._get_pulses()
         return any(p.get("name") == name for p in pulses)
 
+    def _get_pulse_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return a pulse dict by name, or None if not found."""
+        pulses = self._get_pulses()
+        for p in pulses:
+            if p.get("name") == name:
+                return p
+        return None
+
     def create_pulse(
         self,
         name: str,
@@ -685,20 +708,16 @@ class MetabaseSetup:
         schedule_hour: int = 9,
         schedule_day: str = "mon,tue,wed,thu,fri",
     ) -> dict[str, Any]:
-        """Create a Metabase Pulse (alert/notification).
+        """Create or update a Metabase Pulse (alert/notification).
 
-        If a pulse with the same name exists, skips (idempotent).
+        If a pulse with the same name exists, updates it via PUT
+        /api/pulse/:id (idempotent with update propagation).
 
-        POST /api/pulse.
+        POST /api/pulse (or PUT if updating).
         card_index references the card by position in the cards list.
         Schedule: daily at specified hour on specified days.
         Channel: email to admin (config-only, no SMTP required).
         """
-        if self._pulse_name_exists(name):
-            log.info("Pulse '%s' already exists — skipping (idempotent)", name)
-            pulses = self._get_pulses()
-            return next(p for p in pulses if p.get("name") == name)
-
         if not (0 <= card_index < len(cards) and cards[card_index].get("id")):
             raise MetabaseSetupError(
                 f"No valid card at index {card_index} for pulse '{name}'"
@@ -727,6 +746,25 @@ class MetabaseSetup:
             "skip_if_empty": True,
             "collection_position": None,
         }
+
+        existing = self._get_pulse_by_name(name)
+        if existing:
+            pulse_id = existing["id"]
+            payload["id"] = pulse_id
+            response = requests.put(
+                f"{self.base_url}/api/pulse/{pulse_id}",
+                headers=self._headers,
+                json=payload,
+                timeout=15,
+            )
+            if response.status_code != 200:
+                raise MetabaseApiError(
+                    f"PUT /api/pulse/{pulse_id}", response.status_code, response.text
+                )
+            updated = response.json()
+            log.info("Pulse '%s' updated (id=%s)", name, updated.get("id"))
+            return updated
+
         response = requests.post(
             f"{self.base_url}/api/pulse",
             headers=self._headers,
@@ -760,7 +798,7 @@ class MetabaseSetup:
         return pulses
 
     # ── Collection Export (Snapshot) ────────────────────────
-    # Source: GET /api/collection/:id/items  + recursive
+    # Source: GET /api/collection/root, GET /api/collection/:id/items
 
     def get_root_collection_id(self) -> int:
         """Return the ID of the root collection ('Our Analytics')."""
@@ -802,6 +840,14 @@ class MetabaseSetup:
             )
 
         data = response.json()
+
+        # Strip volatile fields for deterministic snapshot
+        STRIP_KEYS = {"last_used_at", "updated_at", "entity_id"}
+        for item in data.get("data", []):
+            for key in STRIP_KEYS:
+                item.pop(key, None)
+            item.pop("last-edit-info", None)
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
             json.dumps(data, indent=2, ensure_ascii=False),
@@ -815,8 +861,18 @@ class MetabaseSetup:
 
     # ── Full Pipeline ────────────────────────────────────────
 
-    def full_setup(self) -> dict[str, Any]:
+    def full_setup(
+        self,
+        dbname: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+    ) -> dict[str, Any]:
         """Execute the complete setup pipeline.
+
+        Args:
+            dbname: PostgreSQL database name (default from POSTGRES_DB env).
+            user: PostgreSQL user (default from POSTGRES_USER env).
+            password: PostgreSQL password (default from POSTGRES_PASSWORD env).
 
         Returns dict with keys for each resource type.
         """
@@ -829,9 +885,9 @@ class MetabaseSetup:
         }
 
         # Step 1: Database connection
-        dbname = os.getenv("POSTGRES_DB", "ecommerce-db")
-        user = os.getenv("POSTGRES_USER", "ecommerce-fish")
-        password = os.getenv("POSTGRES_PASSWORD")
+        dbname = dbname or os.getenv("POSTGRES_DB", "ecommerce-db")
+        user = user or os.getenv("POSTGRES_USER", "ecommerce-fish")
+        password = password or os.getenv("POSTGRES_PASSWORD")
         if not password:
             raise MetabaseSetupError("POSTGRES_PASSWORD not set in environment")
         result["database"] = self.create_database_connection(
@@ -865,10 +921,11 @@ def main():
     """Parse CLI arguments and execute setup steps.
 
     Flags:
-      --db-only     Configure only the database connection
-      --questions   Create saved SQL questions
-      --dashboard   Create dashboard with cards
-      --full        Execute all steps above
+      --db-only       Configure only the database connection
+      --questions     Create saved SQL questions
+      --dashboard     Create dashboard with cards
+      --export-only   Export the collection snapshot to JSON
+      --full          Execute all steps above
     """
     load_dotenv()
 
@@ -896,6 +953,11 @@ def main():
         help="Create Metabase Pulse alerts (requires --dashboard first)",
     )
     parser.add_argument(
+        "--export-only",
+        action="store_true",
+        help="Export the collection snapshot to JSON without creating resources",
+    )
+    parser.add_argument(
         "--full",
         action="store_true",
         help="Execute complete setup: database + questions + dashboard + pulses",
@@ -912,7 +974,8 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Default to --full if no flags provided
-    if not any([args.db_only, args.questions, args.dashboard, args.pulses, args.full]):
+    if not any([args.db_only, args.questions, args.dashboard, args.pulses,
+                 args.export_only, args.full]):
         args.full = True
 
     # Read credentials from environment (fail if unset — no hardcoded passwords)
@@ -947,8 +1010,8 @@ def main():
         setup.authenticate(mb_user, mb_password)
 
         if args.full:
-            # Full pipeline: delegate to full_setup()
-            setup.full_setup()
+            # Full pipeline: delegate to full_setup() with validated creds
+            setup.full_setup(dbname=pg_db, user=pg_user, password=pg_password)
             log.info("=" * 50)
             log.info("FULL SETUP COMPLETE")
             log.info("Dashboard: http://localhost:3000")
@@ -965,11 +1028,11 @@ def main():
             if args.questions:
                 cards = setup.create_all_questions()
 
+            question_names = [qd["name"] for qd in QUESTIONS]
+
             if args.dashboard:
                 if not cards:
-                    existing = setup._get_questions()
-                    cards = [q for q in existing if q.get("name") in
-                             [qd["name"] for qd in QUESTIONS]]
+                    cards = setup.get_questions_by_names(question_names)
                 if cards:
                     setup.setup_dashboard_with_cards(cards)
                 else:
@@ -977,13 +1040,14 @@ def main():
 
             if args.pulses:
                 if not cards:
-                    existing = setup._get_questions()
-                    cards = [q for q in existing if q.get("name") in
-                             [qd["name"] for qd in QUESTIONS]]
+                    cards = setup.get_questions_by_names(question_names)
                 if cards:
                     setup.create_all_pulses(cards)
                 else:
                     log.warning("No questions available for pulses.")
+
+            if args.export_only:
+                setup.export_collection(COLLECTION_JSON)
 
     except (
         MetabaseAuthError,

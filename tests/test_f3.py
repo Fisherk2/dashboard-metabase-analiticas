@@ -94,7 +94,9 @@ class TestSetupMetabaseScript:
         source = SETUP_SCRIPT.read_text()
         assert "import requests" in source, "setup_metabase.py should import requests"
 
-    @pytest.mark.parametrize("arg", ["--db-only", "--questions", "--dashboard", "--full"])
+    @pytest.mark.parametrize("arg", [
+        "--db-only", "--questions", "--dashboard", "--pulses", "--export-only", "--full",
+    ])
     def test_setup_has_expected_argparse_arg(self, arg: str):
         """El argparse soporta los flags esperados del plan F3."""
         source = SETUP_SCRIPT.read_text()
@@ -122,8 +124,8 @@ class TestSetupMetabaseScript:
                     f"Missing 'create_dashboard' method. Found: {methods}"
                 )
 
-    def test_setup_has_add_card_to_dashboard_method(self):
-        """MetabaseSetup define setup_dashboard_with_cards() (replaces add_card_to_dashboard)."""
+    def test_setup_has_setup_dashboard_with_cards_method(self):
+        """MetabaseSetup define setup_dashboard_with_cards()."""
         source = SETUP_SCRIPT.read_text()
         tree = ast.parse(source)
         for node in ast.walk(tree):
@@ -179,12 +181,15 @@ class TestQueriesDashboard:
         assert "EXPLAIN ANALYZE" in content, "Dashboard queries file should contain EXPLAIN ANALYZE"
 
     def test_queries_dashboard_uses_materialized_views(self):
-        """Las queries deben usar mv_*, no tablas base."""
+        """3 de 4 queries deben usar vistas materializadas (mv_*)."""
         content = QUERIES_DASHBOARD.read_text()
         mv_count = content.count("mv_")
-        assert mv_count >= 4, (
-            f"Expected >=4 references to materialized views, found {mv_count}"
+        assert mv_count >= 3, (
+            f"Expected >=3 references to materialized views, found {mv_count}"
         )
+        # Confirm Query 4 uses base tables (no MV) as documented
+        assert "productos" in content
+        assert "proveedores" in content
 
     def test_queries_dashboard_has_execution_times(self):
         """El archivo documenta tiempos de ejecución."""
@@ -302,24 +307,26 @@ class TestMetabaseApiRuntime:
     @pytest.mark.runtime
     @pytest.mark.timeout(30)
     def test_collection_json_has_cards(self, run_cmd):
-        """La colección exportada contiene entries de cards (questions)."""
+        """La colección exportada contiene entries de cards (model='card')."""
         content = COLLECTION_JSON.read_text()
         data = json.loads(content)
-        # The export structure varies by Metabase version; check for card-like keys
-        json_str = json.dumps(data).lower()
-        assert any(kw in json_str for kw in ["card", "question"]), (
-            "Collection JSON should contain card/question entries"
+        items = data.get("data", [])
+        card_items = [i for i in items if i.get("model") == "card"]
+        assert len(card_items) >= 3, (
+            f"Expected >=3 cards in collection, found {len(card_items)}: "
+            f"{[i.get('name') for i in card_items]}"
         )
 
     @pytest.mark.runtime
     @pytest.mark.timeout(30)
     def test_collection_json_has_dashboard(self, run_cmd):
-        """La colección exportada contiene entries de dashboard."""
+        """La colección exportada contiene un entry de dashboard."""
         content = COLLECTION_JSON.read_text()
         data = json.loads(content)
-        json_str = json.dumps(data).lower()
-        assert "dashboard" in json_str, (
-            "Collection JSON should contain dashboard entries"
+        items = data.get("data", [])
+        dashboard_items = [i for i in items if i.get("model") == "dashboard"]
+        assert len(dashboard_items) >= 1, (
+            f"Expected >=1 dashboard in collection, found {len(dashboard_items)}"
         )
 
     @pytest.mark.runtime

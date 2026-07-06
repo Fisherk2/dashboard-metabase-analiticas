@@ -34,7 +34,7 @@ Crea 4 queries guardadas:
 - Rotación por Categoría (bar chart)
 - Stock Actual vs Mínimo (table with conditional formatting)
 - Top 10 Productos por Ventas (row chart)
-- Alertas de Stock Mínimo (table with variable `{{umbral_multiplier}}`)
+- Alertas de Stock Mínimo (table)
 
 ### 3. Dashboard + Cards
 ```bash
@@ -76,9 +76,9 @@ make logs-mb
 # Verificar credenciales en .env
 grep MB_USER .env
 grep MB_PASSWORD .env
-# Valores por defecto si no están configurados:
-# MB_USER=admin@local
-# MB_PASSWORD=admin
+# MB_USER debe ser un email válido (ej: admin@example.com)
+# MB_PASSWORD debe tener: mayúscula, minúscula, dígito, 8+ chars
+# El script FALLA si estas variables no están configuradas — no hay defaults
 ```
 
 ### Error de conexión a PostgreSQL
@@ -126,7 +126,7 @@ lsof -i :3000
 | `/api/database` | GET, POST | Gestión de conexiones |
 | `/api/card` | GET, POST | Gestión de preguntas (queries) |
 | `/api/dashboard` | GET, POST | Gestión de dashboards |
-| `/api/dashboard/{id}/cards` | POST | Añadir cards al dashboard |
+| `/api/dashboard/{id}` | PUT | Actualizar dashboard + añadir/actualizar cards |
 | `/api/pulse` | GET, POST | Gestión de alertas |
 | `/api/collection/root` | GET | Obtener colección raíz |
 | `/api/collection/{id}/items` | GET | Exportar items de colección |

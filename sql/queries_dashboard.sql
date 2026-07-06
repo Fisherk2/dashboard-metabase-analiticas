@@ -76,9 +76,9 @@ LIMIT 10;
 
 -- =============================================================================
 -- Query 4: Alertas de Stock Mínimo
--- Panel: Alertas de Stock Mínimo (table with {{umbral_multiplier}})
+-- Panel: Alertas de Stock Mínimo (table)
 -- Tablas base: productos + proveedores
--- Nota: Esta query usa tablas base porque necesita aplicar el umbral dinámico.
+-- Nota: Usa tablas base porque la lógica de stock mínimo no está en las MVs.
 -- =============================================================================
 
 EXPLAIN ANALYZE
@@ -91,7 +91,7 @@ SELECT
     pr.email AS contacto_proveedor
 FROM productos p
 JOIN proveedores pr ON p.proveedor_id = pr.id
-WHERE p.stock_actual <= p.stock_minimo * 1.0
+WHERE p.stock_actual <= p.stock_minimo
 ORDER BY p.stock_actual ASC;
 
 -- Tiempo esperado: <200ms (índices en productos.proveedor_id, proveedores.id)

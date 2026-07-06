@@ -105,9 +105,8 @@ metabase-setup: ## Configurar Metabase: DB connection + questions + dashboard + 
 metabase-export: ## Exportar colección Metabase a JSON
 	python scripts/setup_metabase.py --export-only
 
-metabase-pulse-test: ## Verificar que los Pulses están configurados
-	@echo "=== Pulses configurados ==="
-	$(PSQL) -c "SELECT 1 AS pulse_check" > /dev/null 2>&1 && echo "Pulses available in Metabase dashboard" || echo "Run metabase-setup first"
+metabase-pulse-test: ## Verificar Pulses via setup script (idempotente)
+	python scripts/setup_metabase.py --pulses
 
 # ─── Testing ─────────────────────────────────────────────────
 .PHONY: test test-queries test-integrity test-full
