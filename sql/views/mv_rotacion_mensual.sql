@@ -28,4 +28,4 @@ CREATE INDEX IF NOT EXISTS idx_mv_rotacion_categoria
 CREATE INDEX IF NOT EXISTS idx_mv_rotacion_mes_anio
     ON mv_rotacion_mensual (mes, anio);
 
-REFRESH MATERIALIZED VIEW mv_rotacion_mensual;
+-- Nota: WITH DATA ya pobló la MV. Refrescar con: make mv-refresh

@@ -26,4 +26,4 @@ WITH DATA;
 CREATE INDEX IF NOT EXISTS idx_mv_top_productos_ranking
     ON mv_top_productos (ingresos_totales DESC);
 
-REFRESH MATERIALIZED VIEW mv_top_productos;
+-- Nota: WITH DATA ya pobló la MV. Refrescar con: make mv-refresh

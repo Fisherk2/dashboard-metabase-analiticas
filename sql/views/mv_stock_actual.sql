@@ -31,4 +31,4 @@ CREATE INDEX IF NOT EXISTS idx_mv_stock_estado
 CREATE INDEX IF NOT EXISTS idx_mv_stock_producto
     ON mv_stock_actual (producto_id);
 
-REFRESH MATERIALIZED VIEW mv_stock_actual;
+-- Nota: WITH DATA ya pobló la MV. Refrescar con: make mv-refresh
