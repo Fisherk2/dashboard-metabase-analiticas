@@ -58,13 +58,16 @@ class TestDockerCompose:
 
 
 class TestScriptsCleanup:
-    """F0-01c: Remove stub .sh files from scripts/."""
+    """F0-01c: Remove stub .sh files from scripts/ (allow known F4 scripts)."""
+
+    ALLOWED_SH_FILES = {"test_persistence.sh"}  # F4-06: roundtrip validation
 
     def test_no_sh_files(self, root: Path):
         scripts_dir = root / "scripts"
         assert scripts_dir.is_dir(), "scripts/ directory must exist"
-        sh_files = list(scripts_dir.glob("*.sh"))
-        assert len(sh_files) == 0, f"Found .sh files: {[f.name for f in sh_files]}"
+        sh_files = [f for f in scripts_dir.glob("*.sh")
+                    if f.name not in self.ALLOWED_SH_FILES]
+        assert len(sh_files) == 0, f"Found unexpected .sh files: {[f.name for f in sh_files]}"
 
 
 class TestGitignore:
