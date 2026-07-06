@@ -1,171 +1,131 @@
-# Plan de Ejecución — F2: Núcleo
+# Plan de Ejecución — F3: Interfaces
 
-**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Fase:** F2 (✅ COMPLETADO)
-**Metodología:** Slicing vertical con checkpoints de calidad (patrón F1)
-**Reemplaza:** F1 plan (preservado en git history, commit `f218f99`+)
-**Alcance confirmado:** Schema estrella + datos + índices + MVs + particionamiento + test suite
+**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Fase:** F3 (📋 LISTO PARA EJECUTAR)
+**Metodología:** Slicing vertical con checkpoints de calidad (patrón F0/F1/F2)
+**Reemplaza:** N/A (nueva fase)
+**Alcance confirmado:** Setup reproducible vía Metabase API + 4 paneles (3 core + 1 alertas) + 2 Metabase Pulses + export JSON + test suite
 
 ---
 
 ## 1. Resumen
 
-F2 construye el **núcleo analítico** del proyecto: schema estrella de 10 tablas (6 dimensiones + 4 hechos), datos sintéticos realistas con Python + Faker (155K+ registros), 9+ índices B-tree, 3 vistas materializadas pre-calculadas, particionamiento de `ventas` por fecha, y suite de tests automatizada. Todo optimizado para queries <2s.
+F3 construye la **capa de interfaces analíticas** del proyecto: script Python `setup_metabase.py` que configura reproduciblemente Metabase mediante su API REST (database connection, 4 questions, 1 dashboard, 4 cards, 2 Pulses de alertas), 4 paneles visuales para los KPIs de rotación/stock/ventas/alertas, 2 Metabase Pulses para alertas automáticas, export JSON de la colección para portabilidad, y suite de tests estáticos + runtime. Todo con queries <2s validadas con EXPLAIN ANALYZE.
 
-**Estimación total:** 12 horas (~1.5 días)
-**Vertical slices:** 6
-**Checkpoints:** 6 (quality gates)
-**Commits atómicos esperados:** 6-8
+**Estimación total:** 6.5 horas (~1 día)
+**Vertical slices:** 4
+**Checkpoints:** 4 (quality gates)
+**Commits atómicos esperados:** 4-5
 **Decisiones confirmadas vía question tool:**
-- ✅ Particionamiento: slice 5 de F2
-- ✅ Logistica: schema + 20K datos
-- ✅ Tests: `test_f2.py` completo (estáticos + runtime)
+- ✅ Alcance: 4 paneles + alertas Pulse (Completo)
+- ✅ Setup: Script Python con Metabase API REST (programático)
+- ✅ Tests: Estáticos + runtime (patrón F2, sin Playwright)
+- ✅ Reproducibilidad: Export JSON colección a `metabase/collections/`
 
 ---
 
 ## 2. Estado Actual Detectado
 
-| Elemento | Estado | Acción F2 |
+| Elemento | Estado | Acción F3 |
 |----------|--------|-----------|
-| `scripts/` | Solo `requirements.txt` (157 bytes) y `.gitkeep` | **Crear** `init.sql` + `generate_data.py` + `refresh_materialized_views.sql` |
-| `sql/indexes/` | Directorio vacío | **Crear** `create_indexes.sql` |
-| `sql/views/` | Directorio vacío | **Crear** `mv_rotacion_mensual.sql`, `mv_stock_actual.sql`, `mv_top_productos.sql` |
-| `sql/partitions/` | Directorio vacío | **Crear** `partition_ventas.sql` |
-| `tests/` | `test_f0.py` (72 tests) + `test_f1.py` (67 tests) | **Crear** `test_f2.py` (~40 tests) |
-| `Makefile` | Targets F2 ya definidos: `db-init`, `data-generate`, `data-count`, `mv-refresh`, `indexes-check`, `test-queries`, `test-integrity` | Verificar cobertura |
-| `docs/SCHEMA.md` | ER diagram completo (378 líneas) | Referencia para crear `init.sql` |
-| `specs/spec-star-schema.md` | Especificación detallada (124 líneas) | **Fuente de verdad** para DDL |
-| `specs/spec-data-generation.md` | Volúmenes + reglas de negocio (137 líneas) | **Fuente de verdad** para script Python |
-| `specs/spec-sql-optimization.md` | DDL de MVs + particionamiento (202 líneas) | **Fuente de verdad** para optimización |
-| PostgreSQL 15+ | ✅ Operativo (F1) | Reutilizar |
-| Metabase OSS | ✅ Operativo (F1) | Consumir datos F2 (F3) |
-| `tests/conftest.py` | ✅ Existe (F1) con `root`, `run_cmd`, `PROJECT_ROOT`, `has_docker` | Reutilizar fixtures |
+| `metabase/collections/` | Solo `.gitkeep` | **Crear** `dashboard_ecommerce.json` (export) |
+| `scripts/` | `generate_data.py`, `init.sql`, etc. | **Crear** `setup_metabase.py` (nuevo script API) |
+| `tests/` | `test_f0.py`, `test_f1.py`, `test_f2.py` | **Crear** `test_f3.py` (estáticos + runtime) |
+| `docs/` | WORKFLOW, SCHEMA, ARCHITECTURE, etc. | **Crear** `METABASE_SETUP.md` (guía troubleshooting) |
+| `Makefile` | Targets F3 faltan: `metabase-setup`, `metabase-export`, `metabase-pulse-test` | **Añadir** 3-4 targets nuevos |
+| `metabase/collections/.gitkeep` | Existe | Mantener |
+| Metabase OSS | ✅ Operativo (F1) y saludable | Consumir (F3) |
+| `mv_rotacion_mensual` | ✅ Operativa (F2) | Consumir en panel Rotación |
+| `mv_stock_actual` | ✅ Operativa (F2) | Consumir en panel Stock + Alertas |
+| `mv_top_productos` | ✅ Operativa (F2) | Consumir en panel Top 10 |
+| `tests/conftest.py` | ✅ Existe con `root`, `run_cmd`, `has_docker` | Reutilizar fixtures |
 
 ---
 
 ## 3. Slices y Tareas
 
-### Slice 1: Schema Foundation (init.sql)
+### Slice 1: Setup Reproductible vía Metabase API
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F2-01** | Crear `scripts/init.sql` con **6 tablas de dimensiones** en orden: `categorias`, `proveedores`, `productos`, `clientes`, `tiempo`, `promociones`. Aplicar: `SERIAL PK`, `UNIQUE` en campos clave, `CHECK` constraints (precios >0, stock >=0), `NOT NULL` declarados. Comentarios `COMMENT ON TABLE` para cada tabla. | 1.5 h | `psql -f scripts/init.sql` exit 0; 6 tablas en `information_schema.tables`; `\d+ productos` muestra constraints esperados | F1 ✅ |
-| **F2-02** | Añadir a `scripts/init.sql` las **4 tablas de hechos**: `ventas`, `inventario`, `devoluciones`, `logistica`. Cada una con: SERIAL PK, FKs explícitas a dimensiones (`REFERENCES tabla(id)`), CHECK constraints (cantidad >0, stocks >=0), índices B-tree en cada FK. Sección delimitada con comentarios: `-- ============ HECHOS ============`. | 1.5 h | 10 tablas en `information_schema.tables`; `pg_indexes` muestra índices en todas las FKs; `\d ventas` muestra FKs correctas | F2-01 |
-| **F2-03** | Validar schema end-to-end: `make db-init` ejecuta sin errores; `make db-reset` roundtrip funciona (DROP+CREATE+INIT); `make db-shell -c "\dt"` lista 10 tablas. | 30 min | `make db-reset && make db-shell -c "\dt"` exit 0 y muestra 10 tablas | F2-02 |
+| **F3-01** | Investigar Metabase REST API: endpoints `POST /api/database`, `POST /api/card`, `POST /api/dashboard`, `POST /api/pulse`. Documentar auth flow (session token via `POST /api/session`). Crear `scripts/setup_metabase.py` con: clase `MetabaseSetup`, método `authenticate()` (POST /api/session con username/password de admin), `create_database_connection()` (name, host=postgres, port=5432, dbname=ecommerce, user, password desde .env). | 1 h | `python scripts/setup_metabase.py --db-only` exit 0; `GET /api/database` lista conexión creada | F2 ✅, Metabase operativo |
+| **F3-02** | Añadir métodos para crear 4 "Questions" (saved SQL queries) usando la API: `create_question(name, sql, db_id, display_type)`. Mapeo de tipos: tabla → "table", barra → "bar", barra horizontal → "row", número → "scalar", línea → "line". Queries parametrizadas con `{{variable}}` (sintaxis Metabase field filters). | 45 min | `python scripts/setup_metabase.py --questions` exit 0; 4 cards listadas en `GET /api/card` con `dataset_query.native.query` conteniendo el SQL correcto | F3-01 |
+| **F3-03** | Crear dashboard único "E-commerce Analytics" con 4 cards: `create_dashboard(name)`, `add_card_to_dashboard(dash_id, card_id, row, col, size_x, size_y)`. Layout 2x2 (grid 12 cols). Export colección completa a `metabase/collections/dashboard_ecommerce.json` con `GET /api/collection/:id/items` + recursivo. | 45 min | `python scripts/setup_metabase.py --dashboard` exit 0; dashboard visible en `http://localhost:3000/collection/...`; JSON exportado válido | F3-02 |
+| **F3-04** | Añadir target `metabase-setup` al Makefile (ejecuta setup_metabase.py --full). Validar idempotencia: si DB connection ya existe, actualizar; si question existe, no duplicar. | 30 min | `make metabase-setup` reproduce dashboard desde cero; `make metabase-setup` segunda vez no duplica resources | F3-03 |
 
-**Subtotal Slice 1:** 3.5 horas
+**Subtotal Slice 1:** 3 horas
 
-### Checkpoint 1: Schema Foundation ✅
+### Checkpoint 1: Setup Funcional ✅
 
-- [ ] `make db-init` exit 0 (schema completo)
-- [ ] `make db-reset` roundtrip funciona (DROP CASCADE + init.sql)
-- [ ] 10 tablas en `information_schema.tables` (6 dim + 4 hechos)
-- [ ] Todas las FKs declaradas con `REFERENCES`
-- [ ] CHECK constraints en precios/stocks/cantidades
-- [ ] Índices B-tree en cada FK (verificar con `pg_indexes`)
+- [ ] `make metabase-setup` exit 0 (setup completo desde cero)
+- [ ] `make metabase-setup` segunda vez no duplica (idempotente)
+- [ ] `curl -s -H "X-Metabase-Session: $TOKEN" http://localhost:3000/api/database` retorna 1 DB
+- [ ] `GET /api/card` retorna 4 cards (questions)
+- [ ] `GET /api/dashboard` retorna 1 dashboard con 4 cards
+- [ ] `metabase/collections/dashboard_ecommerce.json` existe con JSON válido
 
 ---
 
-### Slice 2: Data Generation (Python + Faker)
+### Slice 2: 3 Paneles Core (Rotación, Stock, Top 10)
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F2-04** | Crear `scripts/requirements.txt` con `faker>=18.0`, `psycopg2-binary>=2.9`, `python-dotenv>=1.0`. | 10 min | `pip install -r scripts/requirements.txt` exit 0; `import faker, psycopg2` sin errores | F0 ✅ |
-| **F2-05** | Implementar `scripts/generate_data.py` con: clase `DataGenerator` (encapsula Faker + conexión psycopg2), función `connect_db()` con variables de entorno, `main()` con orden de inserción por FK, transacciones por tabla (`BEGIN`/`COMMIT`), argparse `--debug` y `--scale`, modo `--reset` (TRUNCATE CASCADE). Métodos privados: `_seed_categorias()`, `_seed_proveedores()`. | 1.5 h | `python scripts/generate_data.py --reset` exit 0; 20 categorías + 50 proveedores en BD; log muestra transacciones BEGIN/COMMIT | F2-03, F2-04 |
-| **F2-06** | Implementar generadores restantes: `_seed_productos()` (5K, distribución Pareto 70/30 sobre categorías), `_seed_clientes()` (2K), `_seed_tiempo()` (365 días 2026-01-01 a 2026-12-31 con campos: fecha, dia_semana, mes, anio, trimestre), `_seed_promociones()` (30 con fecha_inicio/fin). | 1 h | `make data-count` muestra 5K productos, 2K clientes, 365 tiempo, 30 promociones | F2-05 |
-| **F2-07** | Implementar generadores de hechos: `_seed_ventas()` (100K con Pareto 70/30 sobre productos, fecha_venta en 2026, precio_unitario de producto, total = cantidad * precio, promocion_id aleatorio del 30% de ventas), `_seed_inventario()` (50K, daily snapshots por producto), `_seed_devoluciones()` (5K, 5% de ventas), `_seed_logistica()` (20K, 20% de ventas). | 2 h | `make data-count` muestra 100K ventas, 50K inventario, 5K devoluciones, 20K logistica | F2-06 |
-| **F2-08** | Validar volúmenes + integridad: `make data-count` exit 0 con conteos esperados; `make test-integrity` exit 0 (no FK huérfanas); `make db-shell -c "SELECT COUNT(*) FROM ventas WHERE total != cantidad * precio_unitario"` debe retornar 0. | 30 min | data-count correcto, test-integrity OK, totales válidos | F2-07 |
+| **F3-05** | Panel "Rotación por Categoría" — Question con SQL: `SELECT categoria, mes, anio, ventas_totales, ingresos_totales, productos_vendidos FROM mv_rotacion_mensual WHERE anio = {{anio}} AND mes = {{mes}} ORDER BY ventas_totales DESC`. Visualización: bar chart agrupada (categoría X, ventas Y). Filtros: año (dropdown), mes (dropdown). | 30 min | Question creada con display="bar"; filtro año/mes funciona; carga <2s | F3-03 |
+| **F3-06** | Panel "Stock Actual vs Mínimo" — Question con SQL: `SELECT producto_id, nombre, categoria, proveedor, stock_actual, stock_minimo, estado FROM mv_stock_actual WHERE estado IN ('ALERTA', 'PRECAUCION') ORDER BY stock_actual ASC`. Visualización: tabla con formateo condicional de color (rojo/amarillo/verde) por estado. Filtros: categoría, proveedor, estado. | 30 min | Question creada con display="table"; formateo condicional aplicado; carga <2s | F3-03 |
+| **F3-07** | Panel "Top 10 Productos por Ventas" — Question con SQL: `SELECT producto_id, nombre, categoria, unidades_vendidas, ingresos_totales, numero_ventas FROM mv_top_productos ORDER BY ingresos_totales DESC LIMIT 10`. Visualización: row chart (producto Y, ingresos X). Filtros: categoría (dropdown). | 30 min | Question creada con display="row"; filtro categoría funciona; carga <2s | F3-03 |
+| **F3-08** | Validar queries con EXPLAIN ANALYZE desde psql: cada query del dashboard debe ser <2s y usar Index Scan. Documentar tiempos en `sql/queries_dashboard.sql` (4 queries con EXPLAIN ANALYZE + comparación con/sin MVs). | 30 min | `EXPLAIN ANALYZE` para las 4 queries muestra <2s; `sql/queries_dashboard.sql` documentado con tiempos | F3-05, F3-06, F3-07 |
 
-**Subtotal Slice 2:** 5 horas
+**Subtotal Slice 2:** 2 horas
 
-### Checkpoint 2: Data Valid ✅
+### Checkpoint 2: 3 Paneles Core Visibles ✅
 
-- [ ] `make deps` exit 0
-- [ ] `python scripts/generate_data.py --reset` exit 0
-- [ ] Volúmenes: 20+50+5000+2000+365+30+100000+50000+5000+20000 = **155,535 registros**
-- [ ] `make test-integrity` exit 0 (sin huérfanos)
-- [ ] `make data-count` exit 0 con todos los conteos
-- [ ] Ventas: `total = cantidad * precio_unitario` en 100% de filas
-- [ ] Tiempo: 365 días consecutivos (2026-01-01 a 2026-12-31)
+- [ ] Dashboard accesible en `http://localhost:3000/dashboard/...`
+- [ ] 3 cards visibles: Rotación, Stock, Top 10
+- [ ] Cada card carga en <2s (medido con `curl -w "%{time_total}\n"`)
+- [ ] Filtros dropdown funcionan (año, mes, categoría, proveedor, estado)
+- [ ] Export PNG y CSV funciona en cada panel (manual + verificado)
+- [ ] Queries usan `mv_*` (no tablas base) — verificado con `EXPLAIN ANALYZE`
 
 ---
 
-### Slice 3: Indexes (Optimización 1)
+### Slice 3: Panel Alertas + Metabase Pulses
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F2-09** | Crear `sql/indexes/create_indexes.sql` con **9+ índices B-tree** en columnas críticas para JOIN/WHERE/GROUP BY. Mínimo: `idx_ventas_producto_id`, `idx_ventas_cliente_id`, `idx_ventas_fecha_id`, `idx_inventario_producto_id`, `idx_inventario_fecha_id`, `idx_devoluciones_venta_id`, `idx_productos_categoria_id`, `idx_productos_proveedor_id`, `idx_ventas_fecha_venta` (para particionamiento). Usar `CREATE INDEX IF NOT EXISTS` para idempotencia. | 1 h | `make indexes-check` muestra 9+ índices; `EXPLAIN SELECT * FROM ventas WHERE producto_id = 1` usa Index Scan (no Seq Scan) | F2-08 |
-| **F2-10** | Validar rendimiento de queries base (sin MVs todavía): `EXPLAIN ANALYZE` en las 4 queries críticas de `docs/SCHEMA.md` §4. Confirmar que cada una usa índices y completa en <500ms (antes de MVs). Documentar en `sql/queries_baseline.sql` para comparación posterior. | 30 min | 4 queries en `sql/queries_baseline.sql`; cada una usa Index Scan; tiempos <500ms | F2-09 |
+| **F3-09** | Panel "Alertas de Stock Mínimo" (4to panel) — Question con SQL: `SELECT p.id, p.nombre, p.stock_actual, p.stock_minimo, pr.nombre AS proveedor, pr.email AS contacto_proveedor FROM productos p JOIN proveedores pr ON p.proveedor_id = pr.id WHERE p.stock_actual <= p.stock_minimo * {{umbral_multiplier}} ORDER BY p.stock_actual ASC`. Visualización: tabla con badges. Filtros: proveedor (dropdown), umbral (number input, default=1.0). | 30 min | Question creada con display="table"; variable `{{umbral_multiplier}}` editable en panel; carga <2s | F3-06 |
+| **F3-10** | Configurar 2 Metabase Pulses (alertas automáticas): Pulse 1 = "Alerta Stock Crítico" ejecuta query de F3-09 con umbral=1.0, schedule diario 09:00, canales: email (configurado a admin@local). Pulse 2 = "Resumen Ventas Diarias" ejecuta query de Top 10 con LIMIT 5, schedule diario 18:00, canal: email. API: `POST /api/pulse`. | 45 min | 2 pulses creados en `GET /api/pulse`; schedule configurado; channel email configurado (sin envío real, solo config) | F3-09 |
+| **F3-11** | Re-export JSON colección después de crear pulses: `metabase/collections/dashboard_ecommerce.json` ahora incluye cards + dashboard + pulses. Verificar JSON parseable con `python -c "import json; json.load(open('metabase/collections/dashboard_ecommerce.json'))"`. | 15 min | JSON incluye pulses; parseable; commit con diff documentado | F3-10 |
+| **F3-12** | Documentar troubleshooting en `docs/METABASE_SETUP.md`: cómo re-ejecutar setup, cómo reset Metabase sin perder datos, errores comunes (admin password forgotten, port conflict, etc.). Incluir capturas de pantalla (placeholders o reales si disponibles). | 30 min | `docs/METABASE_SETUP.md` existe con secciones: Setup Rápido, Re-configuración, Troubleshooting, FAQ | F3-11 |
 
-**Subtotal Slice 3:** 1.5 horas
+**Subtotal Slice 3:** 2 horas
 
-### Checkpoint 3: Indexes Applied ✅
+### Checkpoint 3: 4 Paneles + Alertas Activas ✅
 
-- [ ] `make indexes-check` muestra 9+ índices
-- [ ] Todas las queries críticas usan Index Scan (no Seq Scan)
-- [ ] Tiempos baseline <500ms (medidos con `\timing`)
-- [ ] `sql/queries_baseline.sql` documenta el plan de ejecución
+- [ ] 4to panel "Alertas de Stock Mínimo" visible en dashboard
+- [ ] Variable `{{umbral_multiplier}}` funciona (cambia resultados en vivo)
+- [ ] 2 Pulses listados en Metabase → Notifications
+- [ ] Pulse 1 schedule: diario 09:00
+- [ ] Pulse 2 schedule: diario 18:00
+- [ ] JSON colección incluye pulses
+- [ ] `docs/METABASE_SETUP.md` completo y revisado
 
 ---
 
-### Slice 4: Materialized Views (Optimización 2)
+### Slice 4: Test Suite F3
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F2-11** | Crear `sql/views/mv_rotacion_mensual.sql` con `CREATE MATERIALIZED VIEW` (ventas + productos + categorias + tiempo agregados por categoria/mes/anio, calcula ventas_totales, ingresos_totales, productos_vendidos). Añadir `CREATE INDEX` en `categoria` y `(mes, anio)`. Usar `WITH DATA` para poblar inmediatamente. | 30 min | `make mv-refresh` funciona; `SELECT COUNT(*) FROM mv_rotacion_mensual` retorna 60 filas (12 meses × 5 categorías) | F2-10 |
-| **F2-12** | Crear `sql/views/mv_stock_actual.sql` con CASE para estado (ALERTA/PRECAUCION/OK según umbrales stock_minimo). JOIN productos + categorias + proveedores. Índices en `estado` y `producto_id`. | 20 min | `SELECT estado, COUNT(*) FROM mv_stock_actual GROUP BY estado` muestra distribución coherente | F2-11 |
-| **F2-13** | Crear `sql/views/mv_top_productos.sql` con `ORDER BY ingresos_totales DESC` y LIMIT implícito (top 100 productos). Índice en `ingresos_totales DESC`. | 20 min | `SELECT * FROM mv_top_productos LIMIT 10` retorna top 10 productos ordenados por ingresos | F2-11 |
-| **F2-14** | Crear `scripts/refresh_materialized_views.sql` con `REFRESH MATERIALIZED VIEW` para las 3 MVs (en orden de dependencia). Añadir target `mv-refresh` (ya existe) y verificar que `make mv-refresh` ejecuta el script completo. | 15 min | `make mv-refresh` refresca las 3 MVs sin errores; log muestra "REFRESH MATERIALIZED VIEW" exitoso | F2-13 |
-| **F2-15** | Validar rendimiento de queries contra MVs: `EXPLAIN ANALYZE SELECT * FROM mv_rotacion_mensual WHERE anio=2026` debe completar en <2s. Documentar tiempos en `docs/PERFORMANCE.md` (nuevo) o añadir a `WORKFLOW.md`. | 30 min | Las 4 queries críticas (rotación, stock, top, alertas) ejecutan <2s con MVs | F2-14 |
+| **F3-13** | Crear `tests/test_f3.py` con **tests estáticos** (sin Docker): existencia de `scripts/setup_metabase.py`, `metabase/collections/dashboard_ecommerce.json`, `docs/METABASE_SETUP.md`. Validar AST de setup_metabase.py: define `MetabaseSetup` class, `authenticate()`, `create_database_connection()`, `create_question()`, `create_dashboard()`. Validar JSON colección: keys esperadas (cards, dashboards, pulses). | 1 h | `pytest tests/test_f3.py -k "not runtime" -v` exit 0; ≥15 tests estáticos verdes | F3-12 |
+| **F3-14** | Añadir **tests runtime** con `@pytest.mark.runtime` (skip si Docker no disponible): (a) `curl /api/health` retorna `{"status":"ok"}`; (b) `python scripts/setup_metabase.py --db-only` exit 0; (c) `GET /api/database` retorna 1 DB; (d) `GET /api/card` retorna 4 cards; (e) `GET /api/dashboard` retorna 1 dashboard; (f) `GET /api/pulse` retorna 2 pulses; (g) EXPLAIN ANALYZE de 4 queries de dashboard <2s. | 1 h | `pytest tests/test_f3.py -v` exit 0; ≥15 tests runtime verdes | F3-13 |
 
 **Subtotal Slice 4:** 2 horas
 
-### Checkpoint 4: Materialized Views Active ✅
+### Checkpoint 4: F3 Complete ✅ (Ready para F4)
 
-- [ ] 3 MVs creadas: `mv_rotacion_mensual`, `mv_stock_actual`, `mv_top_productos`
-- [ ] `make mv-refresh` exit 0 (refresca las 3)
-- [ ] Índices en cada MV creados
-- [ ] Queries contra MVs <2s (validado con EXPLAIN ANALYZE)
-- [ ] MVs pobladas con datos (`WITH DATA`)
-
----
-
-### Slice 5: Partitioning (Optimización 3 - Opcional confirmado)
-
-| ID | Tarea | Estimación | DoD | Dependencias |
-|----|-------|-----------|-----|--------------|
-| **F2-16** | Estrategia: `DROP TABLE ventas CASCADE;` + recrear como tabla particionada + recargar datos. Crear `sql/partitions/partition_ventas.sql` con: `CREATE TABLE ventas (...) PARTITION BY RANGE (fecha_venta)`, **12 particiones mensuales** (2026_01 a 2026_12) usando `FOR VALUES FROM ('YYYY-MM-01') TO ('YYYY-MM-(next)')`. | 1 h | `SELECT * FROM pg_partition_tree('ventas')` muestra 12 particiones + tabla padre; INSERTs se enrutan a partición correcta | F2-08 (datos de ventas) |
-| **F2-17** | Recrear índices en tabla particionada: `CREATE INDEX idx_ventas_fecha_venta ON ventas (fecha_venta);` (PostgreSQL propaga automáticamente a particiones). Re-ejecutar `sql/indexes/create_indexes.sql` con cláusula `IF NOT EXISTS`. Validar con `EXPLAIN SELECT * FROM ventas WHERE fecha_venta BETWEEN '2026-03-01' AND '2026-03-31'` debe mostrar **partition pruning** (solo lee partición ventas_2026_03). | 30 min | EXPLAIN muestra "Partition Pruning" + solo 1 partición escaneada; 100K datos distribuidos en 12 particiones (~8.3K/mes) | F2-16, F2-09 |
-| **F2-18** | Re-validar queries post-particionamiento: las 4 queries críticas deben seguir <2s. Refrescar MVs (pueden estar stale tras DROP ventas). Actualizar `docs/PERFORMANCE.md` con tiempos pre/post particionamiento. | 30 min | Queries <2s; MVs refrescadas; comparison doc | F2-17, F2-15 |
-
-**Subtotal Slice 5:** 2 horas
-
-### Checkpoint 5: Partitioning Active ✅
-
-- [ ] `ventas` es tabla particionada con 12 particiones mensuales
-- [ ] `pg_partition_tree('ventas')` retorna 12 hijos + 1 padre
-- [ ] EXPLAIN muestra **partition pruning** en queries con filtro fecha
-- [ ] Índices recreados en tabla particionada
-- [ ] MVs refrescadas tras recreación de `ventas`
-- [ ] Queries siguen <2s (performance mantenida o mejorada)
-
----
-
-### Slice 6: Test Suite (Automatización)
-
-| ID | Tarea | Estimación | DoD | Dependencias |
-|----|-------|-----------|-----|--------------|
-| **F2-19** | Crear `tests/test_f2.py` con **tests estáticos** (sin Docker requerido): verificar existencia de `scripts/init.sql`, `scripts/generate_data.py`, `sql/indexes/create_indexes.sql`, 3 archivos en `sql/views/`, `sql/partitions/`, `scripts/requirements.txt`. Validar que `init.sql` contiene CREATE TABLE para las 10 tablas esperadas (regex). Validar que `generate_data.py` define `main()` y `DataGenerator` (AST parse). Validar que MVs están definidas en sus archivos. | 1 h | `pytest tests/test_f2.py -k "not runtime" -v` exit 0; ≥15 tests estáticos verdes | C5 |
-| **F2-20** | Añadir **tests runtime** con marker `@pytest.mark.runtime` (skip si Docker no disponible). Tests: `make db-init` exitoso, `SELECT COUNT(*) FROM ventas` ≥ 100000, `make test-integrity` exit 0, `EXPLAIN ANALYZE` para cada MV muestra tiempo <2s, `pg_partition_tree` retorna 12 particiones, `REFRESH MATERIALIZED VIEW` exit 0. | 1.5 h | `pytest tests/test_f2.py -v` exit 0; ≥25 tests runtime verdes; skip automático sin Docker | F2-19, F2-18 |
-
-**Subtotal Slice 6:** 2.5 horas
-
-### Checkpoint 6: F2 Complete ✅ (Ready para F3)
-
-- [ ] `make test` muestra F0 (72) + F1 (67) + F2 (≥40) = **≥179 tests passing**
-- [ ] FTR de F2 pasa checklist de `docs/WORKFLOW.md` §5 (Schema + datos + queries optimizadas)
-- [ ] Roundtrip `make db-reset && make data-generate && make mv-refresh` funciona
-- [ ] `make validate && make up && make db-init && make data-generate && make mv-refresh` es la ruta crítica
-- [ ] `git log --oneline` muestra 6-8 commits atómicos para F2
+- [ ] `make test` muestra F0 (72) + F1 (67) + F2 (40) + F3 (≥30) = **≥209 tests passing**
+- [ ] FTR de F3 pasa checklist de `docs/WORKFLOW.md` §5 (Paneles + queries <2s + export)
+- [ ] `make metabase-setup` es idempotente (re-ejecutable sin duplicar)
+- [ ] Roundtrip `make metabase-setup && make metabase-export && make test` funciona
+- [ ] `git log --oneline` muestra 4-5 commits atómicos para F3
 - [ ] Working tree limpio
 
 ---
@@ -174,212 +134,175 @@ F2 construye el **núcleo analítico** del proyecto: schema estrella de 10 tabla
 
 ```mermaid
 graph TD
-    F2_01[F2-01: Dimensiones] --> F2_02[F2-02: Hechos + FKs]
-    F2_02 --> F2_03[F2-03: Validar schema]
-    F2_03 --> C1[Checkpoint 1]
-    C1 --> F2_05[F2-05: Generator + dim seed]
-    F2_04[requirements.txt] --> F2_05
-    F2_05 --> F2_06[F2-06: Seed dim restantes]
-    F2_06 --> F2_07[F2-07: Seed hechos]
-    F2_07 --> F2_08[F2-08: Validar datos]
-    F2_08 --> C2[Checkpoint 2]
-    C2 --> F2_09[F2-09: Índices]
-    F2_09 --> F2_10[F2-10: Baseline queries]
-    F2_10 --> C3[Checkpoint 3]
-    C3 --> F2_11[F2-11: mv_rotacion]
-    F2_11 --> F2_12[F2-12: mv_stock]
-    F2_11 --> F2_13[F2-13: mv_top]
-    F2_12 --> F2_14[F2-14: refresh.sql]
-    F2_13 --> F2_14
-    F2_14 --> F2_15[F2-15: Validar MVs <2s]
-    F2_15 --> C4[Checkpoint 4]
-    C4 --> F2_16[F2-16: Particionar ventas]
-    F2_16 --> F2_17[F2-17: Re-indexar + pruning]
-    F2_17 --> F2_18[F2-18: Re-validar <2s]
-    F2_18 --> C5[Checkpoint 5]
-    C5 --> F2_19[F2-19: Tests estáticos]
-    F2_19 --> F2_20[F2-20: Tests runtime]
-    F2_20 --> C6[Checkpoint 6]
-    C6 --> F3[F3: Interfaces Metabase]
+    F3_01[F3-01: API script + auth] --> F3_02[F3-02: Create 4 questions]
+    F3_02 --> F3_03[F3-03: Create dashboard + export]
+    F3_03 --> F3_04[F3-04: Makefile target + idempotencia]
+    F3_04 --> C1[Checkpoint 1]
+    C1 --> F3_05[F3-05: Panel Rotación]
+    C1 --> F3_06[F3-06: Panel Stock]
+    C1 --> F3_07[F3-07: Panel Top 10]
+    F3_05 --> F3_08[F3-08: Validar queries <2s]
+    F3_06 --> F3_08
+    F3_07 --> F3_08
+    F3_08 --> C2[Checkpoint 2]
+    C2 --> F3_09[F3-09: Panel Alertas]
+    F3_09 --> F3_10[F3-10: 2 Metabase Pulses]
+    F3_10 --> F3_11[F3-11: Re-export JSON]
+    F3_11 --> F3_12[F3-12: docs/METABASE_SETUP.md]
+    F3_12 --> C3[Checkpoint 3]
+    C3 --> F3_13[F3-13: Tests estáticos]
+    F3_13 --> F3_14[F3-14: Tests runtime]
+    F3_14 --> C4[Checkpoint 4]
+    C4 --> F4[F4: Pruebas]
 
-    style F2_01 fill:#bbf,stroke:#333
-    style F2_05 fill:#bbf,stroke:#333
-    style F2_09 fill:#bbf,stroke:#333
-    style F2_11 fill:#bbf,stroke:#333
-    style F2_16 fill:#bbf,stroke:#333
-    style F2_19 fill:#bbf,stroke:#333
+    style F3_01 fill:#bbf,stroke:#333
+    style F3_05 fill:#bbf,stroke:#333
+    style F3_09 fill:#bbf,stroke:#333
+    style F3_13 fill:#bbf,stroke:#333
     style C1 fill:#9f9,stroke:#333
     style C2 fill:#9f9,stroke:#333
     style C3 fill:#9f9,stroke:#333
-    style C4 fill:#9f9,stroke:#333
-    style C5 fill:#9f9,stroke:#333
-    style C6 fill:#f96,stroke:#333
+    style C4 fill:#f96,stroke:#333
 ```
 
 **Leyenda:**
-- **Slice 1**: Schema estrella (10 tablas)
-- **Slice 2**: ETL Python + datos (155K registros)
-- **Slice 3**: Índices B-tree (optimización 1)
-- **Slice 4**: Vistas materializadas (optimización 2)
-- **Slice 5**: Particionamiento (optimización 3)
-- **Slice 6**: Test suite automatizada
+- **Slice 1**: Setup programático vía Metabase API
+- **Slice 2**: 3 paneles core con queries validadas
+- **Slice 3**: 4to panel + alertas + documentación
+- **Slice 4**: Test suite automatizada
 
 ---
 
 ## 5. Checkpoints — Quality Gates
 
-### Checkpoint 1: Schema Foundation
-- `make db-init` exit 0
-- `make db-reset` roundtrip funciona
-- 10 tablas en `information_schema.tables`
-- FKs declaradas con `REFERENCES`
-- CHECK constraints válidos
+### Checkpoint 1: Setup Funcional
+- `make metabase-setup` exit 0
+- `make metabase-setup` idempotente
+- API endpoints retornan recursos esperados
 
-### Checkpoint 2: Data Valid
-- 155,535 registros totales (volúmenes esperados)
-- `make test-integrity` exit 0 (sin FK huérfanas)
-- `total = cantidad * precio_unitario` en 100% de ventas
-- 365 días consecutivos en `tiempo`
+### Checkpoint 2: 3 Paneles Core Visibles
+- 3 cards visibles en dashboard
+- Carga <2s por card
+- Filtros dropdown funcionales
+- Export PNG/CSV funciona
 
-### Checkpoint 3: Indexes Applied
-- 9+ índices en `pg_indexes`
-- Index Scan (no Seq Scan) en queries críticas
-- Baseline <500ms con `\timing`
+### Checkpoint 3: 4 Paneles + Alertas Activas
+- 4to panel visible
+- 2 Pulses configurados
+- JSON colección completo
+- Documentación troubleshooting
 
-### Checkpoint 4: Materialized Views Active
-- 3 MVs creadas y pobladas
-- `make mv-refresh` exit 0
-- Queries contra MVs <2s
-- Índices en cada MV
-
-### Checkpoint 5: Partitioning Active
-- 12 particiones mensuales en `ventas`
-- `pg_partition_tree` muestra jerarquía correcta
-- Partition pruning visible en EXPLAIN
-- MVs refrescadas post-DROP
-
-### Checkpoint 6: F2 Complete
-- FTR pasa WORKFLOW.md §5 checklist F2
-- ≥40 tests nuevos (estáticos + runtime)
+### Checkpoint 4: F3 Complete
+- FTR pasa WORKFLOW.md §5 checklist F3
+- ≥30 tests nuevos
 - Roundtrip completo funciona
-- Working tree limpio, 6-8 commits atómicos
+- 4-5 commits atómicos
 
 ---
 
 ## 6. Riesgos y Mitigaciones
 
 | Riesgo | Impacto | Probabilidad | Mitigación | Contingencia |
-|--------|---------|--------------|------------|--------------|
-| **Faker genera datos que violan CHECK constraints** (ej: stock negativo) | Alto | Media | Validar cada batch antes de `COMMIT` con `assert all(...)`; usar Faker `random_int(min, max)` con bounds | Wrap en try/except + rollback + log error |
-| **Tiempos de inserción >30 min para 100K ventas** | Medio | Media | Usar `executemany()` con batch_size=1000; `COPY` (psycopg2 `copy_from`) para velocidad 10x | Reducir DATA_ROWS_SALES a 50K temporalmente |
-| **DROP ventas particionada pierde FKs de devoluciones/logistica** | Alto | Alta | `DROP TABLE ventas CASCADE` (todas las FKs se eliminan); recrear devoluciones/logistica DESPUÉS con FKs a nueva `ventas` | Hacer backup antes con `pg_dump ventas > ventas_backup.sql` |
-| **MVs quedan stale tras DROP ventas** | Medio | Alta | `make mv-refresh` después de F2-16; documentar en script | Añadir `REFRESH` automático en `init.sql` o en target `db-reset` |
-| **PostgreSQL rechaza partición por solapamiento de rangos** | Bajo | Baja | Generar script con `for month in 01..12`; validar que rangos sean contiguos sin gaps | `pg_partitions` para diagnóstico; rollback con `DROP TABLE ventas` |
-| **Tests runtime fallan en CI sin Docker** | Bajo | Alta | Marker `@pytest.mark.runtime` + skip automático si `not has_docker()` (patrón F1) | Tests estáticos cubren el 80% sin runtime |
-| **Distribución Pareto produce concentración extrema** (1 producto = 50% ventas) | Bajo | Media | Usar `numpy.random.pareto(alpha=1.5)` con escala controlada; validar con `SELECT producto_id, COUNT(*) ... LIMIT 10` | Ajustar `alpha` parameter; alternativa: distribución zipfiana |
-| **Tiempo de `make data-generate` excede 30 min** | Medio | Media | Background generation con `--scale 0.5` (50K ventas); perfilado con `cProfile` | Reducir volúmenes temporalmente; documentar tiempos esperados |
+|--------|---------|--------------|------------|---------------|
+| **Metabase API cambia entre versiones** | Alto | Media | Documentar versión Metabase usada; tests detectan cambios de schema JSON; usar `metabase/metabase:latest` con tag pinned en docker-compose | Fijar versión: `metabase/metabase:v0.49.x` |
+| **Admin password de Metabase se pierde** | Alto | Baja | Guardar en `.env` (no en código); `make metabase-reset` recrea admin | Reset Metabase + re-ejecutar setup script |
+| **Queries de dashboard >2s con datos reales** | Alto | Media | EXPLAIN ANALYZE en cada query antes de crear card; preferir MVs siempre; documentar tiempos en `sql/queries_dashboard.sql` | Refrescar MVs; añadir índices a MVs si es necesario |
+| **Metabase Pulse no envía emails sin SMTP** | Medio | Alta | Documentar que channel email es mock/config-only; validar solo que la config se persiste en API | Usar Slack/Teams webhook como alternativa |
+| **Script setup_metabase.py no es idempotente** | Alto | Media | Verificar con `GET` antes de `POST`; usar `PUT` para updates; tests detectan duplicados | Añadir `--reset` flag que borra y recrea |
+| **Layout dashboard se rompe al cambiar número de cards** | Bajo | Media | Layout 2x2 hardcoded; tests validan `cards_count=4`; manual fix si se añaden cards | Documentar layout en `docs/METABASE_SETUP.md` |
+| **JSON colección muy grande (>1MB)** | Bajo | Baja | Comprimir con gzip antes de commit; `.gitattributes` para JSON | Split en archivos por recurso |
+| **Metabase tarda en arrancar (>2 min)** | Medio | Alta | `docker wait` con healthcheck; tests runtime usan `timeout=60`; documentar tiempo esperado | Aumentar timeout en tests |
 
 ---
 
 ## 7. Patrones Aplicados
 
-| Patrón | Tipo | Aplicación en F2 | Slice |
+| Patrón | Tipo | Aplicación en F3 | Slice |
 |--------|------|-------------------|-------|
-| **Star Schema** | Data Warehouse | 6 dimensiones + 4 hechos; FKs explícitas; desnormalización estratégica | S1 |
-| **ETL Pipeline** | Integración | Extract (Faker) → Transform (Python objects con reglas negocio) → Load (psycopg2 COPY/executemany) | S2 |
-| **Factory** | GoF Creacional | `Faker(seed=42)` para reproducibilidad; factory functions para crear instancias de generadores | S2 |
-| **Strategy** | GoF Comportamental | Distribución Pareto vs Uniforma intercambiables para generación de ventas; permite A/B de distribuciones | S2 |
-| **Repository** | Enterprise | Funciones de seed encapsulan SQL + conexión; `DataGenerator._seed_xxx()` abstrae persistencia | S2 |
-| **Builder** | GoF Creacional | `DataGenerator` builder pattern: configura conexión → define orden de seed → ejecuta pipeline | S2 |
-| **Template Method** | GoF Comportamental | `main()` define orden fijo (categorias → proveedores → ... → logistica) que subclases pueden override | S2 |
-| **Index Pattern (B-tree)** | Data Access | Índices en FK + WHERE + GROUP BY columnas para OLAP | S3 |
-| **Materialized View (Cache)** | Data Access | Pre-computar KPIs (rotación, stock, top productos); refresh strategy desacoplada | S4 |
-| **Partition Pattern (Range)** | Data Access | `PARTITION BY RANGE (fecha_venta)` con 12 particiones mensuales; partition pruning automático | S5 |
-| **Test Suite Pattern** | Testing | Estáticos (sin Docker) + runtime (`@pytest.mark.runtime` con skip automático) | S6 |
-| **Checkpoint/Quality Gate** | DevOps | 6 gates entre slices; rollback posible si falla | All |
+| **Adapter Pattern** | GoF Estructural | `MetabaseSetup` adapta REST API a objetos Python (Database, Question, Dashboard, Pulse) | S1 |
+| **Builder Pattern** | GoF Creacional | `create_dashboard()` construye dashboard con cards en orden específico; `setup_metabase.py --full` = pipeline completo | S1, S3 |
+| **Facade Pattern** | GoF Estructural | `setup_metabase.py` es facade para toda la API REST; usuario no necesita conocer endpoints | S1 |
+| **Strategy Pattern** | GoF Comportamental | Display type mapping (bar/row/table/scalar) intercambiable por question; permite A/B de visualizaciones | S2 |
+| **Repository Pattern** | Enterprise | Métodos `create_question()`, `create_dashboard()` abstraen persistencia en Metabase | S1-S3 |
+| **Idempotency Pattern** | DevOps | Setup script puede ejecutarse N veces sin duplicar recursos (check-then-create) | S1 |
+| **Snapshot Pattern** | Enterprise | Export JSON colección = snapshot del estado para backup/migración | S1, S3 |
+| **Template Method Pattern** | GoF Comportamental | `setup_metabase.py --full` define orden fijo (auth → DB → questions → dashboard → export); cada paso es hookeable | S1, S3 |
+| **Test Suite Pattern** | Testing | Estáticos (sin Docker) + runtime (`@pytest.mark.runtime` con skip automático) | S4 |
+| **Checkpoint/Quality Gate** | DevOps | 4 gates entre slices; rollback posible si falla | All |
 
-**NO aplica en F2:** `clean-ddd-hexagonal` (F2 es data layer, no domain layer con bounded contexts). Las decisiones arquitectónicas (Star Schema, ETLs) ya están tomadas en `docs/ARCHITECTURE.md` §1.
+**NO aplica en F3:** `clean-ddd-hexagonal` (F3 es capa de presentación, no domain layer con bounded contexts). Las decisiones arquitectónicas (Metabase como BI, Star Schema) ya están tomadas en ADRs y `docs/ARCHITECTURE.md`.
 
 ---
 
-## 8. Comandos de Verificación Global (F2 Complete)
+## 8. Comandos de Verificación Global (F3 Complete)
 
 ```bash
-# 1. Schema
-make db-reset && make db-init                  # Schema limpio
-make db-shell -c "\dt"                         # 10 tablas
-make db-shell -c "SELECT COUNT(*) FROM pg_indexes WHERE schemaname='public'"  # ≥15 índices
+# 1. Setup reproducible
+make up                                          # PostgreSQL + Metabase up
+make metabase-setup                              # Crea DB connection, 4 questions, dashboard, 2 pulses
+make metabase-export                             # Exporta JSON colección
 
-# 2. Datos
-make deps                                      # Instalar deps
-make data-generate                             # Generar 155K registros
-make data-count                                # Conteos por tabla
-make test-integrity                            # Sin FK huérfanas
+# 2. Validar dashboard
+# Abrir http://localhost:3000 → E-commerce Analytics
+# Verificar 4 cards: Rotación, Stock, Top 10, Alertas
+# Probar filtros: año, mes, categoría, proveedor, estado
 
-# 3. Índices
-make indexes-check                             # 9+ índices
-make db-shell -c "EXPLAIN SELECT * FROM ventas WHERE producto_id = 1"  # Index Scan
+# 3. Validar rendimiento
+psql queries con EXPLAIN ANALYZE <2s
+cat sql/queries_dashboard.sql                    # Tiempos documentados
 
-# 4. MVs
-make mv-refresh                                # Refresca 3 MVs
-make db-shell -c "SELECT matviewname FROM pg_matviews"  # 3 MVs
-make db-shell -c "EXPLAIN ANALYZE SELECT * FROM mv_rotacion_mensual WHERE anio=2026"  # <2s
+# 4. Validar pulses
+# Metabase → Notifications → Ver 2 pulses con schedule
 
-# 5. Particionamiento
-make db-shell -c "SELECT * FROM pg_partition_tree('ventas')"  # 12 particiones
-make db-shell -c "EXPLAIN SELECT * FROM ventas WHERE fecha_venta BETWEEN '2026-03-01' AND '2026-03-31'"  # partition pruning
+# 5. Tests
+make test                                        # F0 (72) + F1 (67) + F2 (40) + F3 (≥30) = ≥209 passing
+pytest tests/test_f3.py -v --tb=short            # Detalle F3
 
-# 6. Tests
-make test                                      # F0 (72) + F1 (67) + F2 (≥40) = ≥179 passing
-pytest tests/test_f2.py -v --tb=short          # Detalle F2
-
-# 7. Roundtrip final
-make db-reset && make data-generate && make mv-refresh && make test
+# 6. Roundtrip final
+make destroy && make setup && make metabase-setup && make test
 ```
 
 ---
 
-## 9. Métricas F2
+## 9. Métricas F3
 
 | Métrica | Valor Objetivo | Medición |
 |---------|---------------|----------|
-| Tareas completadas | 18/18 | tasks/todo.md checkboxes |
-| Checkpoints pasados | 6/6 | Checkpoint sections §5 |
-| Tiempo total | ≤ 12 h | Clock |
-| Archivos modificados/creados | ~10 | `git diff --name-only` |
-| Commits atómicos | 6-8 | `git log --oneline F1..F2` |
-| Tests passing | 139 (F0+F1) + ≥40 (F2) = ≥179 | `pytest` |
-| Tablas creadas | 10 (6 dim + 4 hechos) | `information_schema.tables` |
-| Registros totales | 155,535 | `make data-count` |
-| Índices B-tree | ≥9 | `pg_indexes` |
-| Vistas materializadas | 3 | `pg_matviews` |
-| Particiones | 12 mensuales | `pg_partition_tree('ventas')` |
-| Queries <2s | 100% de queries críticas | `EXPLAIN ANALYZE` |
-| FK huérfanas | 0 | `make test-integrity` |
+| Tareas completadas | 14/14 | tasks/todo.md checkboxes |
+| Checkpoints pasados | 4/4 | Checkpoint sections §5 |
+| Tiempo total | ≤ 6.5 h | Clock |
+| Archivos modificados/creados | ~7 | `git diff --name-only` |
+| Commits atómicos | 4-5 | `git log --oneline F2..F3` |
+| Tests passing | 179 (F0+F1+F2) + ≥30 (F3) = ≥209 | `pytest` |
+| Paneles Metabase | 4 (3 core + 1 alertas) | Manual count |
+| Pulses configurados | 2 | `GET /api/pulse` |
+| Queries <2s | 4/4 queries dashboard | `EXPLAIN ANALYZE` |
+| JSON colección | 1 archivo válido | `python -c "import json; json.load(open(...))"` |
 
-**Definición de "Done" por Capa (F2):**
-- **Schema**: 10 tablas con FKs + CHECK constraints + índices FK
-- **Datos**: 155K registros con integridad referencial 100%
-- **Performance**: Índices + MVs + Particionamiento → queries <2s
-- **Optimización**: Partition pruning visible en EXPLAIN
-- **Tests**: ≥40 tests nuevos (estáticos + runtime) con marker
+**Definición de "Done" por Capa (F3):**
+- **Setup**: Script API funcional + idempotente + Makefile target
+- **Visualización**: 4 paneles visibles con queries <2s + filtros + export
+- **Alertas**: 2 Pulses configurados con schedule
+- **Reproducibilidad**: JSON colección exportado + docs troubleshooting
+- **Tests**: ≥30 tests nuevos (estáticos + runtime) con marker
 
 ---
 
 ## 10. Estado Actual y Siguiente Fase
 
-**F1: Infraestructura** — ✅ COMPLETADO (10 tasks, 145 tests, 5 commits atómicos)
+**F1: Infraestructura** — ✅ COMPLETADO (10 tasks, 67 tests, 5 commits atómicos)
 **F2: Núcleo** — ✅ COMPLETADO (20 tasks, 6 slices, 8 commits, +40 tests)
+**F3: Interfaces** — 📋 PLAN APROBADO — Listo para ejecutar (14 tasks, 4 slices, 6.5h estimadas)
 
-**F3: Interfaces** — 📋 LISTO PARA PLANIFICAR. Alcance:
-- Conectar Metabase a PostgreSQL (admin user, JDBC)
-- 3+ paneles: Rotación por Categoría, Stock vs Mínimo, Top 10 Productos
-- Validar queries con EXPLAIN ANALYZE <2s
-- Configurar alertas de stock mínimo (opcional)
-- Export PNG/CSV funcional
+**F4: Pruebas** — Próxima fase después de F3. Alcance:
+- Validar rendimiento de las 4 queries de dashboard (<2s)
+- Validar exportación de paneles a PNG/CSV
+- Probar flujos de navegación (filtros, drill-down)
+- Validar persistencia tras restart contenedores
+- Probar conexión fallida PostgreSQL + manejo de errores
 
-**Dependencias:** Requiere F2 completado (datos + MVs operativas).
-**Estimación:** 1 día (según WORKFLOW.md F3).
+**Dependencias:** Requiere F3 completado (paneles + pulses operativos).
+**Estimación:** 1 día (según WORKFLOW.md F4).
 
 ---
 
@@ -387,4 +310,4 @@ make db-reset && make data-generate && make mv-refresh && make test
 
 | Versión | Fecha | Autor | Cambio | Lecciones Aprendidas |
 |---------|-------|-------|--------|---------------------|
-| 1.0 | 2026-07-03 | Fisherk2 | Versión inicial del plan F2 | Slicing vertical con 6 checkpoints permite fail-fast en data layer; DROP+RECREATE es viable para particionamiento porque F2 es entorno sintético; tests runtime con marker ahorran tiempo en CI local |
+| 1.0 | 2026-07-06 | Fisherk2 | Versión inicial del plan F3 | Slicing vertical con 4 checkpoints permite fail-fast en capa de interfaces; Metabase API REST permite setup 100% reproducible via código; idempotencia check-then-create evita duplicación de recursos en re-ejecuciones; export JSON colección = snapshot portable para disaster recovery |
