@@ -11,6 +11,7 @@ DOCKER_FILE = docker/docker-compose.yml
 PSQL = docker exec -i metabase-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
 PYTHON = python
 PIP = pip
+GENERATOR = docker exec -i metabase-generator
 
 # ─── Default ─────────────────────────────────────────────────
 .DEFAULT_GOAL := help
@@ -55,12 +56,13 @@ destroy: ## ⚠️ Detener y eliminar volúmenes (pierde datos)
 db-shell: ## Conectar a psql interactivo
 	docker exec -it metabase-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
 
-db-init: ## Ejecutar schema inicial (scripts/init.sql)
+db-init: ## Ejecutar schema inicial + índices (scripts/init.sql + sql/indexes/create_indexes.sql)
 	$(PSQL) < scripts/init.sql
+	$(PSQL) < sql/indexes/create_indexes.sql
 
-db-reset: ## ⚠️ Reiniciar BD desde cero (drop + recreate + init)
+db-reset: ## ⚠️ Reiniciar BD desde cero (drop + recreate + init + indexes)
 	$(PSQL) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-	$(MAKE) db-init 2>/dev/null || $(PSQL) < scripts/init.sql
+	$(MAKE) db-init
 
 db-check: ## Verificar que PostgreSQL está listo
 	docker exec -i metabase-postgres pg_isready -U $(POSTGRES_USER)
@@ -68,14 +70,14 @@ db-check: ## Verificar que PostgreSQL está listo
 # ─── Data Generation ─────────────────────────────────────────
 .PHONY: deps data-generate data-debug data-count
 
-deps: ## Instalar dependencias Python (scripts/requirements.txt)
-	$(PIP) install -r scripts/requirements.txt
+deps: ## Instalar dependencias Python en el contenedor data-generator
+	$(GENERATOR) pip install -r /scripts/requirements.txt
 
 data-generate: ## Generar datos sintéticos
-	$(PYTHON) scripts/generate_data.py
+	$(GENERATOR) python /scripts/generate_data.py
 
 data-debug: ## Generar datos con logs detallados
-	$(PYTHON) scripts/generate_data.py --debug
+	$(GENERATOR) python /scripts/generate_data.py --debug
 
 data-count: ## Contar registros por tabla
 	@echo "=== Registros por tabla ==="
@@ -88,7 +90,8 @@ data-count: ## Contar registros por tabla
 .PHONY: mv-refresh indexes-check
 
 mv-refresh: ## Refrescar vistas materializadas
-	test -f scripts/refresh_materialized_views.sql && $(PSQL) < scripts/refresh_materialized_views.sql || echo "No views to refresh yet (file not found)"
+	@test -f scripts/refresh_materialized_views.sql || { echo "Error: scripts/refresh_materialized_views.sql not found"; exit 1; }
+	$(PSQL) < scripts/refresh_materialized_views.sql
 
 indexes-check: ## Listar todos los índices
 	$(PSQL) -c "SELECT indexname, tablename, indexdef FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename, indexname;"
@@ -113,7 +116,7 @@ test-full: test-queries test-integrity ## Ejecutar todas las validaciones
 # ─── Utilities ───────────────────────────────────────────────
 .PHONY: setup clean
 
-setup: deps up db-init data-generate ## 🚀 Setup completo del proyecto (deps → up → db-init → data-generate)
+setup: up deps db-init data-generate ## 🚀 Setup completo del proyecto (up → deps → db-init → data-generate)
 
 clean: ## Limpiar archivos temporales
 	@echo "Limpiando __pycache__, *.pyc, *.pyo, .pytest_cache..."
