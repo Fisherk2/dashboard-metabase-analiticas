@@ -38,8 +38,8 @@ DEFAULT_MB_URL = "http://localhost:3000"
 PG_CONTAINER = "metabase-postgres"
 MB_CONTAINER = "metabase"
 
-MB_USER = os.getenv("MB_USER", "admin@example.com")
-MB_PASSWORD = os.getenv("MB_PASSWORD", "Metabase1")
+MB_USER = os.getenv("MB_USER", "")
+MB_PASSWORD = os.getenv("MB_PASSWORD", "")
 MB_URL = os.getenv("METABASE_URL", DEFAULT_MB_URL).rstrip("/")
 
 
@@ -119,6 +119,8 @@ def test_metabase_error_on_pg_down() -> bool:
     log_step("Querying Metabase with PostgreSQL down")
     time.sleep(3)  # Wait for Metabase to detect connection loss
 
+    # Note: Metabase stores admin credentials in its own app DB (not analytics DB),
+    # so session creation works even with PostgreSQL down.
     token = get_token()
     headers = {"X-Metabase-Session": token}
 
@@ -229,6 +231,12 @@ def main():
     result = run_docker_cmd("ps", "-q", "-f", f"name={PG_CONTAINER}")
     if not result.stdout.strip():
         log_error(f"Container '{PG_CONTAINER}' not found. Is Docker running?")
+        sys.exit(2)
+
+    # Validate required environment variables
+    if not MB_USER or not MB_PASSWORD:
+        log_error("MB_USER and MB_PASSWORD must be set in .env")
+        log_error("Run via 'make test' to load .env variables")
         sys.exit(2)
 
     tests = [

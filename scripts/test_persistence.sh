@@ -70,6 +70,14 @@ fi
 # ─── Roundtrip ──────────────────────────────────────────────
 cd "$PROJECT_DIR"
 
+# Verify required make targets exist before starting destructive roundtrip
+for target in destroy setup mv-refresh metabase-setup test; do
+    if ! make -n "$target" &>/dev/null; then
+        log_error "Required make target '$target' not found"
+        exit 1
+    fi
+done
+
 log_info "=== INICIO ROUNDTRIP ==="
 
 run_step "make destroy"   make destroy

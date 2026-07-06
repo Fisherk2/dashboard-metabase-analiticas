@@ -126,10 +126,15 @@ def _compute_percentiles(times: list[float]) -> dict[str, float]:
     """Compute p50, p95, p99 from a sorted list of times."""
     sorted_times = sorted(times)
     n = len(sorted_times)
+
+    def _pct(p: float) -> float:
+        idx = min(int(n * p), n - 1)
+        return sorted_times[idx]
+
     return {
-        "p50": sorted_times[int(n * 0.50)],
-        "p95": sorted_times[int(n * 0.95)],
-        "p99": sorted_times[int(n * 0.99)],
+        "p50": _pct(0.50),
+        "p95": _pct(0.95),
+        "p99": _pct(0.99),
         "mean": statistics.mean(sorted_times),
         "min": sorted_times[0],
         "max": sorted_times[-1],
@@ -191,21 +196,23 @@ def main():
     db_config = _load_db_config()
     conn = _connect(db_config)
 
-    _print_header()
-    all_passing = True
+    try:
+        _print_header()
+        all_passing = True
 
-    for query in DASHBOARD_QUERIES:
-        times = _measure_query_time(conn, query["sql"], args.runs)
-        stats = _compute_percentiles(times)
-        passing = _print_row(query["name"], stats, args.threshold)
-        if not passing:
-            all_passing = False
+        for query in DASHBOARD_QUERIES:
+            times = _measure_query_time(conn, query["sql"], args.runs)
+            stats = _compute_percentiles(times)
+            passing = _print_row(query["name"], stats, args.threshold)
+            if not passing:
+                all_passing = False
 
-    _print_summary(all_passing, args.threshold)
-    conn.close()
+        _print_summary(all_passing, args.threshold)
 
-    if not all_passing:
-        sys.exit(1)
+        if not all_passing:
+            sys.exit(1)
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

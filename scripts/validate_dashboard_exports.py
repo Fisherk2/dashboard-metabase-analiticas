@@ -92,9 +92,6 @@ def _validate_csv_export(
             return (0, f"HTTP {resp.status_code}")
 
         content_type = resp.headers.get("Content-Type", "")
-        if "text/csv" not in content_type and "application/octet-stream" not in content_type:
-            # Metabase may not set proper Content-Type; check content instead
-            pass
 
         # Try parsing as CSV
         text = resp.text

@@ -72,7 +72,7 @@ La exportación a PNG solo está disponible mediante la UI de Metabase:
 
 ```bash
 # Exportar CSV de un card específico
-TOKEN=$(python -c "import requests; print(requests.post('http://localhost:3000/api/session', json={'username':'admin@example.com','password':'Metabase1'}).json()['id'])")
+TOKEN=$(python -c "import requests,os; print(requests.post('http://localhost:3000/api/session', json={'username':os.environ['MB_USER'],'password':os.environ['MB_PASSWORD']}).json()['id'])")
 curl -s -H "X-Metabase-Session: $TOKEN" http://localhost:3000/api/card/1/query/csv | head -5
 
 # Verificar PNG (solo UI)
