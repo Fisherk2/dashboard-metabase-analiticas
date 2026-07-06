@@ -8,8 +8,6 @@ services:
   postgres:
     image: postgres:15
     container_name: metabase-postgres
-    ports:
-      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -62,6 +60,30 @@ services:
       resources:
         limits:
           memory: 2g
+
+  # ─── Data Generator (Python) ────────────────────────────────────────────────
+  data-generator:
+    image: python:3.11-slim
+    container_name: metabase-generator
+    working_dir: /scripts
+    volumes:
+      - type: bind
+        source: ../scripts
+        target: /scripts
+        read_only: true
+    environment:
+      MB_DB_HOST: postgres
+      MB_DB_PORT: 5432
+      MB_DB_DBNAME: ${MB_DB_DBNAME}
+      MB_DB_USER: ${MB_DB_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ["tail", "-f", "/dev/null"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ecommerce_net
+    restart: unless-stopped
 
 # ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
