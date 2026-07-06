@@ -24,27 +24,28 @@ from datetime import date, datetime, timedelta
 import psycopg2
 from dotenv import load_dotenv
 from faker import Faker
+from psycopg2.extras import execute_values
 
 load_dotenv()
 
 # ─── Connection Configuration ────────────────────────────────
 # When running inside Docker network, use "postgres" as host;
 # when running from host, use "localhost" (requires PG port exposed).
-_DB_HOST = os.getenv("MB_DB_HOST", "localhost")
-if _DB_HOST == "postgres":
-    # Check if we can resolve "postgres" — if not, fall back to localhost
-    import socket
-    try:
-        socket.getaddrinfo("postgres", 5432)
-    except socket.gaierror:
-        _DB_HOST = "localhost"
+_DB_HOST = os.getenv("MB_DB_HOST", "postgres")
+
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD") or os.getenv("MB_DB_PASS")
+if not DB_PASSWORD:
+    raise ValueError(
+        "POSTGRES_PASSWORD (or MB_DB_PASS) not set. "
+        "Create a .env file from .env.example."
+    )
 
 DB_CONFIG = {
     "host": _DB_HOST,
     "port": int(os.getenv("MB_DB_PORT", 5432)),
     "dbname": os.getenv("MB_DB_DBNAME", "ecommerce"),
     "user": os.getenv("MB_DB_USER", "ecommerce"),
-    "password": os.getenv("POSTGRES_PASSWORD", "change-me-in-production"),
+    "password": DB_PASSWORD,
 }
 
 # Constants
@@ -121,10 +122,29 @@ class DataGenerator:
         if self.debug:
             logging.info(msg)
 
-    def _fetch_ids(self, table: str, column: str = "id") -> list:
-        """Fetch all IDs from a table for FK references."""
-        self.cur.execute(f"SELECT {column} FROM {table}")
-        return [row[0] if len(row) == 1 else row for row in self.cur.fetchall()]
+    # ─── Table name whitelist ──────────────────────────────────
+    ALLOWED_TABLES = frozenset({
+        "categorias", "proveedores", "productos", "clientes",
+        "tiempo", "promociones", "ventas", "inventario",
+        "devoluciones", "logistica",
+    })
+
+    def _validate_table(self, table: str) -> None:
+        """Guard: reject unknown table names (SQL injection defence)."""
+        if table not in self.ALLOWED_TABLES:
+            raise ValueError(f"Unknown table: {table}")
+
+    def _fetch_ids(self, table: str) -> list:
+        """Fetch all IDs from a table (single-column: id). Returns list[int]."""
+        self._validate_table(table)
+        self.cur.execute(f"SELECT id FROM {table}")
+        return [row[0] for row in self.cur.fetchall()]
+
+    def _fetch_rows(self, table: str, columns: str) -> list:
+        """Fetch multiple columns from a table. Returns list[tuple]."""
+        self._validate_table(table)
+        self.cur.execute(f"SELECT {columns} FROM {table}")
+        return self.cur.fetchall()
 
     # ─── Dimension Seeders ──────────────────────────────────
 
@@ -136,23 +156,24 @@ class DataGenerator:
             "Música", "Oficina", "Mascotas", "Cocina", "Bebidas",
             "Videojuegos", "Fotografía", "Relojes", "Joyas", "Instrumentos",
         ]
+        rows = [(n,) for n in categorias]
         self.cur.execute("BEGIN")
-        for nombre in categorias:
-            self.cur.execute(
-                "INSERT INTO categorias (nombre) VALUES (%s) ON CONFLICT (nombre) DO NOTHING",
-                (nombre,)
-            )
+        execute_values(self.cur,
+            "INSERT INTO categorias (nombre) VALUES %s ON CONFLICT (nombre) DO NOTHING",
+            rows, page_size=1000
+        )
         self.conn.commit()
         self._log(f"✓ categorias: {len(categorias)} registros")
 
     def _seed_proveedores(self) -> None:
         """Insert 50 suppliers with Faker."""
+        rows = [(self.fake.company(), self.fake.name(), self.fake.email())
+                for _ in range(self.num["proveedores"])]
         self.cur.execute("BEGIN")
-        for _ in range(self.num["proveedores"]):
-            self.cur.execute(
-                "INSERT INTO proveedores (nombre, contacto, email) VALUES (%s, %s, %s) ON CONFLICT (email) DO NOTHING",
-                (self.fake.company(), self.fake.name(), self.fake.email())
-            )
+        execute_values(self.cur,
+            "INSERT INTO proveedores (nombre, contacto, email) VALUES %s ON CONFLICT (email) DO NOTHING",
+            rows, page_size=1000
+        )
         self.conn.commit()
         self.cur.execute("SELECT COUNT(*) FROM proveedores")
         count = self.cur.fetchone()[0]
@@ -167,53 +188,48 @@ class DataGenerator:
         categoria_ids = self._fetch_ids("categorias")
         proveedor_ids = self._fetch_ids("proveedores")
 
-        self.cur.execute("BEGIN")
+        # Weighted categories: first 30% get 70% probability
+        pareto_weights = [
+            3 if i < len(categoria_ids) * 0.3 else 1
+            for i in range(len(categoria_ids))
+        ]
+        rows = []
         for _ in range(self.num["productos"]):
-            # Weighted categories: first 30% get 70% probability
-            cat_id = random.choices(
-                categoria_ids,
-                weights=[3 if i < len(categoria_ids) * 0.3 else 1
-                         for i in range(len(categoria_ids))],
-                k=1
-            )[0]
-            self.cur.execute(
-                """INSERT INTO productos
-                   (nombre, descripcion, precio, stock_actual, stock_minimo,
-                    categoria_id, proveedor_id, fecha_creacion)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                (
-                    self.fake.word().capitalize() + f" {random.randint(1, 999)}",
-                    self.fake.sentence(nb_words=8),
-                    round(random.uniform(5.0, 5000.0), 2),
-                    random.randint(0, 500),
-                    random.randint(1, 20),
-                    cat_id,
-                    random.choice(proveedor_ids),
-                    self.fake.date_time_between(
-                        start_date="-2y", end_date="now"
-                    ),
-                )
-            )
+            cat_id = random.choices(categoria_ids, weights=pareto_weights, k=1)[0]
+            rows.append((
+                self.fake.word().capitalize() + f" {random.randint(1, 999)}",
+                self.fake.sentence(nb_words=8),
+                round(random.uniform(5.0, 5000.0), 2),
+                random.randint(0, 500),
+                random.randint(1, 20),
+                cat_id,
+                random.choice(proveedor_ids),
+                self.fake.date_time_between(start_date="-2y", end_date="now"),
+            ))
+
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO productos (nombre, descripcion, precio, stock_actual, stock_minimo, categoria_id, proveedor_id, fecha_creacion) VALUES %s",
+            rows, page_size=1000
+        )
         self.conn.commit()
-        self._log(f"✓ productos: {self.num['productos']} registros")
+        self._log(f"✓ productos: {len(rows)} registros")
 
     def _seed_clientes(self) -> None:
         """Insert 2K customers with Faker."""
-        self.cur.execute("BEGIN")
+        rows = []
         for _ in range(self.num["clientes"]):
-            self.cur.execute(
-                """INSERT INTO clientes (nombre, email, direccion, fecha_registro)
-                   VALUES (%s, %s, %s, %s)
-                   ON CONFLICT (email) DO NOTHING""",
-                (
-                    self.fake.name(),
-                    self.fake.email(),
-                    self.fake.address(),
-                    self.fake.date_time_between(
-                        start_date="-3y", end_date="now"
-                    ),
-                )
-            )
+            rows.append((
+                self.fake.name(),
+                self.fake.email(),
+                self.fake.address(),
+                self.fake.date_time_between(start_date="-3y", end_date="now"),
+            ))
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO clientes (nombre, email, direccion, fecha_registro) VALUES %s ON CONFLICT (email) DO NOTHING",
+            rows, page_size=1000
+        )
         self.conn.commit()
         self.cur.execute("SELECT COUNT(*) FROM clientes")
         count = self.cur.fetchone()[0]
@@ -221,51 +237,51 @@ class DataGenerator:
 
     def _seed_tiempo(self) -> None:
         """Insert 365 days (2026 full year) with computed attributes."""
-        self.cur.execute("BEGIN")
+        rows = []
         d = date(2026, 1, 1)
         for _ in range(self.num["tiempo"]):
             mes_idx = d.month - 1
             trim = f"Q{(mes_idx // 3) + 1}"
-            self.cur.execute(
-                """INSERT INTO tiempo (fecha, dia_semana, mes, anio, trimestre)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON CONFLICT (fecha) DO NOTHING""",
-                (
-                    d,
-                    DIAS_SEMANA[d.weekday()],
-                    MESES[mes_idx],
-                    str(d.year),
-                    trim,
-                )
-            )
+            rows.append((
+                d,
+                DIAS_SEMANA[d.weekday()],
+                MESES[mes_idx],
+                str(d.year),
+                trim,
+            ))
             d += timedelta(days=1)
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO tiempo (fecha, dia_semana, mes, anio, trimestre) VALUES %s ON CONFLICT (fecha) DO NOTHING",
+            rows, page_size=365
+        )
         self.conn.commit()
-        self._log(f"✓ tiempo: {self.num['tiempo']} registros (2026)")
+        self._log(f"✓ tiempo: {len(rows)} registros (2026)")
 
     def _seed_promociones(self) -> None:
         """Insert 30 promotions with date ranges."""
         categoria_ids = self._fetch_ids("categorias")
 
-        self.cur.execute("BEGIN")
+        rows = []
         for _ in range(self.num["promociones"]):
             start = self.fake.date_between(start_date="-1y", end_date="+6m")
             end = start + timedelta(days=random.randint(7, 60))
             # 50% of promos apply to a specific category
             cat_id = random.choice([None] + categoria_ids)
-            self.cur.execute(
-                """INSERT INTO promociones
-                   (nombre, descuento, fecha_inicio, fecha_fin, categoria_id)
-                   VALUES (%s, %s, %s, %s, %s)""",
-                (
-                    self.fake.word().capitalize(),
-                    round(random.uniform(5.0, 50.0), 2),
-                    start,
-                    end,
-                    cat_id,
-                )
-            )
+            rows.append((
+                self.fake.word().capitalize(),
+                round(random.uniform(5.0, 50.0), 2),
+                start,
+                end,
+                cat_id,
+            ))
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO promociones (nombre, descuento, fecha_inicio, fecha_fin, categoria_id) VALUES %s",
+            rows, page_size=1000
+        )
         self.conn.commit()
-        self._log(f"✓ promociones: {self.num['promociones']} registros")
+        self._log(f"✓ promociones: {len(rows)} registros")
 
     # ─── Fact Seeders ───────────────────────────────────────
 
@@ -289,9 +305,8 @@ class DataGenerator:
             [4] * pareto_idx + [1] * (len(producto_ids) - pareto_idx)
         )
 
-        self.cur.execute("BEGIN")
-        batch_count = 0
-        for _ in range(self.num["ventas"]):
+        rows = []
+        for i in range(self.num["ventas"]):
             producto_id = random.choices(producto_ids, weights=pareto_weights, k=1)[0]
             cliente_id = random.choice(cliente_ids)
             tiempo_id = random.choice(tiempo_ids)
@@ -307,24 +322,23 @@ class DataGenerator:
                 start_date=FECHA_INICIO, end_date=FECHA_FIN
             )
 
-            self.cur.execute(
-                """INSERT INTO ventas
-                   (producto_id, cliente_id, fecha_id, cantidad,
-                    precio_unitario, total, promocion_id, fecha_venta)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                (producto_id, cliente_id, tiempo_id, cantidad,
-                 precio, total, promocion_id, fecha_venta)
-            )
-            batch_count += 1
-            if batch_count % 10000 == 0:
-                self._log(f"  ventas progress: {batch_count}/{self.num['ventas']}")
+            rows.append((producto_id, cliente_id, tiempo_id, cantidad,
+                         precio, total, promocion_id, fecha_venta))
 
+            if (i + 1) % 10000 == 0:
+                self._log(f"  ventas progress: {i + 1}/{self.num['ventas']}")
+
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO ventas (producto_id, cliente_id, fecha_id, cantidad, precio_unitario, total, promocion_id, fecha_venta) VALUES %s",
+            rows, page_size=1000
+        )
         self.conn.commit()
-        self._log(f"✓ ventas: {self.num['ventas']} registros")
+        self._log(f"✓ ventas: {len(rows)} registros")
 
     def _seed_inventario(self) -> None:
         """Insert 50K inventory records: daily snapshots per product."""
-        productos = self._fetch_ids("productos", "id, stock_actual")
+        productos = self._fetch_rows("productos", "id, stock_actual")
         tiempo_ids = self._fetch_ids("tiempo")
         proveedor_ids = self._fetch_ids("proveedores")
 
@@ -335,37 +349,36 @@ class DataGenerator:
             len(productos) * snaps_per_product
         )
 
-        self.cur.execute("BEGIN")
-        batch_count = 0
+        rows = []
         for prod_id, stock_actual in productos:
             stock_inicial = stock_actual
             for _ in range(snaps_per_product):
-                if batch_count >= total_records:
+                if len(rows) >= total_records:
                     break
                 stock_final = max(0, stock_inicial + random.randint(-20, 20))
-                self.cur.execute(
-                    """INSERT INTO inventario
-                       (producto_id, fecha_id, stock_inicial, stock_final, proveedor_id, fecha_registro)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
-                    (
-                        prod_id,
-                        random.choice(tiempo_ids),
-                        stock_inicial,
-                        stock_final,
-                        random.choice(proveedor_ids),
-                        self.fake.date_time_between(
-                            start_date=FECHA_INICIO, end_date=FECHA_FIN
-                        ),
-                    )
-                )
+                rows.append((
+                    prod_id,
+                    random.choice(tiempo_ids),
+                    stock_inicial,
+                    stock_final,
+                    random.choice(proveedor_ids),
+                    self.fake.date_time_between(
+                        start_date=FECHA_INICIO, end_date=FECHA_FIN
+                    ),
+                ))
                 stock_inicial = stock_final
-                batch_count += 1
+
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO inventario (producto_id, fecha_id, stock_inicial, stock_final, proveedor_id, fecha_registro) VALUES %s",
+            rows, page_size=1000
+        )
         self.conn.commit()
-        self._log(f"✓ inventario: {batch_count} registros")
+        self._log(f"✓ inventario: {len(rows)} registros")
 
     def _seed_devoluciones(self) -> None:
         """Insert 5K returns (5% of ventas). Pre-fetches venta data to avoid N+1."""
-        ventas = self._fetch_ids("ventas", "id, fecha_venta")
+        ventas = self._fetch_rows("ventas", "id, fecha_venta")
         tiempo_ids = self._fetch_ids("tiempo")
         cliente_ids = self._fetch_ids("clientes")
         # Pre-load venta product/client data to avoid N+1
@@ -375,60 +388,57 @@ class DataGenerator:
         num_devoluciones = min(self.num["devoluciones"], len(ventas))
         selected_ventas = random.sample(ventas, num_devoluciones)
 
-        self.cur.execute("BEGIN")
+        rows = []
         for venta_id, fecha_venta in selected_ventas:
             data = venta_map.get(venta_id)
             if not data:
                 continue
             producto_id, cliente_id = data
-
-            self.cur.execute(
-                """INSERT INTO devoluciones
-                   (venta_id, producto_id, cliente_id, fecha_id,
-                    cantidad, motivo, fecha_devolucion)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (
-                    venta_id,
-                    producto_id,
-                    cliente_id,
-                    random.choice(tiempo_ids),
-                    random.randint(1, 3),
-                    random.choice(MOTIVOS_DEVOLUCION),
-                    fecha_venta + timedelta(days=random.randint(1, 30)),
-                )
-            )
+            rows.append((
+                venta_id,
+                producto_id,
+                cliente_id,
+                random.choice(tiempo_ids),
+                random.randint(1, 3),
+                random.choice(MOTIVOS_DEVOLUCION),
+                fecha_venta + timedelta(days=random.randint(1, 30)),
+            ))
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO devoluciones (venta_id, producto_id, cliente_id, fecha_id, cantidad, motivo, fecha_devolucion) VALUES %s",
+            rows, page_size=1000
+        )
         self.conn.commit()
-        self._log(f"✓ devoluciones: {num_devoluciones} registros")
+        self._log(f"✓ devoluciones: {len(rows)} registros")
 
     def _seed_logistica(self) -> None:
         """Insert 20K shipping records (20% of ventas)."""
-        ventas = self._fetch_ids("ventas", "id, fecha_venta")
+        ventas = self._fetch_rows("ventas", "id, fecha_venta")
         tiempo_ids = self._fetch_ids("tiempo")
         proveedor_ids = self._fetch_ids("proveedores")
 
         num_logistica = min(self.num["logistica"], len(ventas))
         selected_ventas = random.sample(ventas, num_logistica)
 
-        self.cur.execute("BEGIN")
+        rows = []
         for venta_id, fecha_venta in selected_ventas:
             dias_entrega = random.randint(1, 10)
-            self.cur.execute(
-                """INSERT INTO logistica
-                   (venta_id, proveedor_id, fecha_entrega_id,
-                    estado, metodo_envio, fecha_entrega)
-                   VALUES (%s, %s, %s, %s, %s, %s)""",
-                (
-                    venta_id,
-                    random.choice(proveedor_ids),
-                    random.choice(tiempo_ids),
-                    random.choice(ESTADOS_LOGISTICA),
-                    random.choice(METODOS_ENVIO),
-                    fecha_venta + timedelta(days=dias_entrega)
-                    if random.random() > 0.3 else None,
-                )
-            )
+            rows.append((
+                venta_id,
+                random.choice(proveedor_ids),
+                random.choice(tiempo_ids),
+                random.choice(ESTADOS_LOGISTICA),
+                random.choice(METODOS_ENVIO),
+                fecha_venta + timedelta(days=dias_entrega)
+                if random.random() > 0.3 else None,
+            ))
+        self.cur.execute("BEGIN")
+        execute_values(self.cur,
+            "INSERT INTO logistica (venta_id, proveedor_id, fecha_entrega_id, estado, metodo_envio, fecha_entrega) VALUES %s",
+            rows, page_size=1000
+        )
         self.conn.commit()
-        self._log(f"✓ logistica: {num_logistica} registros")
+        self._log(f"✓ logistica: {len(rows)} registros")
 
     # ─── Orchestration ──────────────────────────────────────
 
@@ -441,6 +451,7 @@ class DataGenerator:
             "proveedores", "categorias",
         ]
         for table in tables:
+            self._validate_table(table)
             self.cur.execute(f"TRUNCATE TABLE {table} CASCADE")
         self.conn.commit()
         self._log("✓ TRUNCATE CASCADE en 10 tablas")
@@ -470,13 +481,13 @@ class DataGenerator:
         total = 0
         print("\n=== RESUMEN DE DATOS GENERADOS ===")
         for table in tables:
+            self._validate_table(table)
             self.cur.execute(f"SELECT COUNT(*) FROM {table}")
             count = self.cur.fetchone()[0]
             print(f"  {table:15s}: {count:>8,} registros")
             total += count
         print(f"  {'---':15s}  {'---':>8}")
         print(f"  {'TOTAL':15s}: {total:>8,} registros\n")
-        self.conn.commit()
 
     def close(self) -> None:
         """Close cursor and connection."""
