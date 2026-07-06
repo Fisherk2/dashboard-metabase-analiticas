@@ -1,6 +1,6 @@
 # Workflow – Dashboard Metabase + Colección Analítica para E-commerce v1.0
 
-**Fecha:** 2026-07-03 | **Autor:** Fisherk2 | **Metodología:** Iterativo
+**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Metodología:** Iterativo
 
 ---
 
@@ -12,8 +12,8 @@
 | **F0: Preparación**     | ✅ COMPLETADO      | Configurar entorno base, convenciones y documentación inicial.  | Estructura de carpetas, `.gitignore`, `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `Makefile`, `tests/test_f0.py` (72 tests). | 1 día         |
 | **F1: Infraestructura** | ✅ COMPLETADO      | Levantar servicios de PostgreSQL y Metabase con Docker.         | `docker-compose.yml`, credenciales seguras, conexión funcional, persistencia, tests/test_f1.py (67 tests).     | 1 día         |
 | **F2: Núcleo**          | ✅ COMPLETADO      | Implementar schema estrella, generar datos y optimizar queries. | `init.sql` (10 tablas), `generate_data.py` (155K registros), 9+ índices, 3 MVs, particionamiento, `tests/test_f2.py` (+40 tests). | ~2 días       |
-| **F3: Interfaces**      | 📋 LISTO PARA PLANIFICAR | Configurar paneles en Metabase y validar queries.               | 3+ paneles en Metabase (rotación, stock, ventas), queries optimizadas.                           | 1 día         |
-| **F4: Pruebas**         | ⏳ PENDIENTE       | Validar rendimiento, exportación y flujos completos.            | Resultados de `EXPLAIN ANALYZE`, pruebas de exportación, validación de paneles.                  | 1 día         |
+| **F3: Interfaces**      | ✅ COMPLETADO      | Configurar paneles en Metabase y validar queries.               | `scripts/setup_metabase.py`, 4 paneles (Rotación, Stock, Top 10, Alertas), 2 Metabase Pulses, `docs/METABASE_SETUP.md`, `tests/test_f3.py` (36 tests). | 1 día         |
+| **F4: Pruebas**         | 📋 LISTO PARA PLANIFICAR | Validar rendimiento, exportación y flujos completos.            | Resultados de `EXPLAIN ANALYZE`, pruebas de exportación, validación de paneles.                  | 1 día         |
 | **F5: Despliegue**      | ⏳ PENDIENTE       | Documentar el proyecto y preparar para portafolio.              | `README.md` final con badges, guías de usuario, capturas de pantalla.                            | 1 día         |
 | **F6: Cierre**          | ⏳ PENDIENTE       | Revisión final y lecciones aprendidas.                          | Retrospectiva documentada, actualización de `AGENTS.md` y `WORKFLOW.md`.                         | 0.5 días      |
 
@@ -95,17 +95,17 @@
 ### Fase 3: Interfaces
 
 **Objetivo:** Configurar paneles en Metabase y validar queries.
-**Estado:** 📋 LISTO PARA PLANIFICAR (dependencias F0+F1+F2 cumplidas)
+**Estado:** ✅ COMPLETADO
 
 
-| **ID** | **Tarea**                                                           | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                                      |
-| ------ | ------------------------------------------------------------------- | --------------- | -------------- | --------------------------------------------------------------------------------- |
-| F3-01  | Conectar Metabase a PostgreSQL y configurar permisos.               | Fisherk2     | 0.5 horas      | Metabase puede ejecutar queries en PostgreSQL.                                    |
-| F3-02  | Crear panel "Rotación por Categoría" en Metabase.                   | Fisherk2     | 1 hora         | Panel muestra datos correctos y se carga en <2s.                                  |
-| F3-03  | Crear panel "Stock Actual vs. Mínimo" en Metabase.                  | Fisherk2     | 1 hora         | Panel muestra alertas de stock mínimo y se carga en <2s.                          |
-| F3-04  | Crear panel "Ventas por Producto (Top 10)" en Metabase.             | Fisherk2     | 1 hora         | Panel muestra los 10 productos con más ventas y se carga en <2s.                  |
-| F3-05  | Validar que todas las queries usen índices y vistas materializadas. | Fisherk2     | 1 hora         | `EXPLAIN ANALYZE` muestra planes de ejecución optimizados para todas las queries. |
-| F3-06  | Configurar alertas de stock mínimo en Metabase (opcional).          | Fisherk2     | 0.5 horas      | Alertas configuradas y visibles en el dashboard.                                  |
+| **ID** | **Tarea**                                                           | **Estado**    | **DoD (Definition of Done)**                                                      |
+| ------ | ------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------- |
+| F3-01  | Conectar Metabase a PostgreSQL y configurar permisos.               | ✅ Completado | `scripts/setup_metabase.py` con `MetabaseSetup` class, `authenticate()`, `create_database_connection()`. Conexión PostgreSQL funcional via JDBC. |
+| F3-02  | Crear panel "Rotación por Categoría" en Metabase.                   | ✅ Completado | Question SQL contra `mv_rotacion_mensual`, display=bar, carga <2s.                |
+| F3-03  | Crear panel "Stock Actual vs. Mínimo" en Metabase.                  | ✅ Completado | Question SQL contra `mv_stock_actual`, display=table, filtros estado/categoría.   |
+| F3-04  | Crear panel "Ventas por Producto (Top 10)" en Metabase.             | ✅ Completado | Question SQL contra `mv_top_productos`, display=row, LIMIT 10, carga <20ms.       |
+| F3-05  | Validar que todas las queries usen índices y vistas materializadas. | ✅ Completado | 3/4 queries usan MVs, 1 usa tablas base (Alertas). EXPLAIN ANALYZE documentado en `sql/queries_dashboard.sql`. |
+| F3-06  | Configurar alertas de stock mínimo en Metabase.                     | ✅ Completado | 2 Metabase Pulses: "Alerta Stock Crítico" (09:00) + "Resumen Ventas" (18:00).     |
 
 
 **Dependencias:**
@@ -117,15 +117,16 @@
 ### Fase 4: Pruebas
 
 **Objetivo:** Validar rendimiento, exportación y flujos completos.
+**Estado:** 📋 LISTO PARA PLANIFICAR
 
 
-| **ID** | **Tarea**                                                                  | **Responsable** | **Estimación** | **DoD (Definition of Done)**                      |
-| ------ | -------------------------------------------------------------------------- | --------------- | -------------- | ------------------------------------------------- |
-| F4-01  | Ejecutar `EXPLAIN ANALYZE` en todas las queries críticas.                  | Fisherk2     | 1 hora         | Todas las queries cargan en <2s.                  |
-| F4-02  | Validar exportación de paneles a PNG/CSV.                                  | Fisherk2     | 0.5 horas      | Archivos exportados son correctos y legibles.     |
-| F4-03  | Probar flujos de navegación en Metabase (ej: filtrar por fecha/categoría). | Fisherk2     | 1 hora         | Todos los flujos funcionan sin errores.           |
-| F4-04  | Validar persistencia de datos tras reiniciar contenedores.                 | Fisherk2     | 0.5 horas      | Datos persisten y los paneles siguen funcionando. |
-| F4-05  | Probar conexión fallida a PostgreSQL y validar manejo de errores.          | Fisherk2     | 0.5 horas      | Metabase muestra mensaje de error claro.          |
+| **ID** | **Tarea**                                                                  | **Estimación** | **DoD (Definition of Done)**                      |
+| ------ | -------------------------------------------------------------------------- | -------------- | ------------------------------------------------- |
+| F4-01  | Ejecutar `EXPLAIN ANALYZE` en todas las queries críticas.                  | 1 hora         | Todas las queries cargan en <2s.                  |
+| F4-02  | Validar exportación de paneles a PNG/CSV.                                  | 0.5 horas      | Archivos exportados son correctos y legibles.     |
+| F4-03  | Probar flujos de navegación en Metabase (ej: filtrar por fecha/categoría). | 1 hora         | Todos los flujos funcionan sin errores.           |
+| F4-04  | Validar persistencia de datos tras reiniciar contenedores.                 | 0.5 horas      | Datos persisten y los paneles siguen funcionando. |
+| F4-05  | Probar conexión fallida a PostgreSQL y validar manejo de errores.          | 0.5 horas      | Metabase muestra mensaje de error claro.          |
 
 
 **Dependencias:**
@@ -264,7 +265,7 @@ graph TD
 | **F0: Preparación**     | Estructura de carpetas y `AGENTS.md`. | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F1: Infraestructura** | `docker-compose.yml` y `.env`.        | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F2: Núcleo**          | Schema, datos, índices, vistas.       | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
-| **F3: Interfaces**      | Paneles en Metabase.                  | Ver detalle abajo. | Fisherk2          | Pendiente     |
+| **F3: Interfaces**      | Paneles en Metabase.                  | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F4: Pruebas**         | Resultados de pruebas.                | Ver detalle abajo. | Fisherk2          | Pendiente     |
 | **F5: Despliegue**      | `README.md` y documentación final.    | Ver detalle abajo. | Fisherk2          | Pendiente     |
 
@@ -283,9 +284,10 @@ graph TD
   - Datos generados y válidos.
   - Queries optimizadas.
 - **F3: Interfaces:**
-  - 3+ paneles funcionales.
-  - Queries cargan en <2s.
-  - Exportación funciona.
+  - 4 paneles funcionales (Rotación, Stock, Top 10, Alertas).
+  - Queries cargan en <2s (validado con EXPLAIN ANALYZE).
+  - 2 Metabase Pulses configurados (Stock Crítico + Resumen Ventas).
+  - Exportación de colección a JSON determinista.
 - **F4: Pruebas:**
   - Todas las queries <2s.
   - Exportación válida.
@@ -347,13 +349,13 @@ gantt
     F0: Preparación          :done, a1, 2026-07-02, 1d
     F1: Infraestructura     :done, a2, after a1, 1d
     F2: Núcleo              :done, a3, after a2, 2d
-    F3: Interfaces          :a4, after a3, 1d
+    F3: Interfaces          :done, a4, after a3, 1d
     F4: Pruebas             :a5, after a4, 1d
     F5: Despliegue          :a6, after a5, 1d
     F6: Cierre              :a7, after a6, 0.5d
     
     section Hitos
-    MVP Listo para Pruebas  :milestone1, after a3, 0d
+    F3 Interfaces Completado :milestone1, after a4, 0d
     MVP Validado            :milestone2, after a5, 0d
     Proyecto Completado     :milestone3, after a7, 0d
 ```
@@ -365,7 +367,7 @@ gantt
 | -------------------------- | ------------------ | --------------------------------------------------------------- |
 | **Plan F2 listo**          | 2026-07-03         | Plan de F2 aprobado, dependencias F0+F1 verificadas.           |
 | **F2 completado**          | 2026-07-06         | F2 Núcleo completado: schema + datos + índices + MVs + partición. |
-| **MVP Listo para Pruebas** | 2026-07-07         | Fases F0, F1, F2, F3 completadas.                              |
+| **F3 Interfaces Completado**| 2026-07-06         | F3 Interfaces completado: setup_metabase.py, 4 paneles, 2 Pulses, code review. |
 | **MVP Validado**           | 2026-07-07         | Fases F4 completadas, todas las queries <2s.                   |
 | **Proyecto Completado**    | 2026-07-08         | Fases F5 y F6 completadas, documentación finalizada.           |
 
@@ -380,6 +382,7 @@ gantt
 | 1.0         | 2026-07-02 | Fisherk2  | Versión inicial del `WORKFLOW.md`. | Priorizar tareas críticas (F0, F1, F2, F3) para garantizar el MVP; Usar vistas materializadas para queries frecuentes mejora el rendimiento significativamente; Docker Compose simplifica la orquestación de servicios. |
 | 1.1         | 2026-07-03 | Fisherk2  | F0+F1 marcados como completados; F2 listo para planificar. | Vertical slicing reduce checkpoints con misma calidad; tests de runtime con marker permiten CI local sin Docker; named volumes eliminan problemas de permisos de bind mount. |
 | 1.2         | 2026-07-06 | Fisherk2  | F2 marcado como completado; F3 listo para planificar. | Generadores Python con distribución Pareto mejoran realismo de datos sintéticos; DROP+RECREATE para particionar funciona en entorno sintético pero requiere CASCADE + refrescar MVs; test_f2.py con estáticos + runtime mantiene calidad sin Docker en CI. |
+| 1.3         | 2026-07-06 | Fisherk2  | F3 Interfaces completado; F4 listo para planificar. | REST API de Metabase para setup programático es viable pero requiere manejar edge cases (setup token, parámetros de dashboard, pulsos); source-driven development evitó asumir endpoints incorrectos; code review multi-eje descubrió 24 observaciones incluyendo 2 críticas. |
 
 
 ---

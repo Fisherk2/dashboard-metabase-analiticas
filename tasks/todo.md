@@ -62,9 +62,10 @@
 
 ## Checkpoint 4: F3 Complete ✅ (Ready para F4)
 
-- [x] `make test` muestra F0 (72) + F1 (67) + F2 (40) + F3 (36) = **215 tests passing**
+- [x] `make test` muestra F0 (72) + F1 (68) + F2 (102) + F3 (38) = **280 tests passing**
 - [x] `make metabase-setup` es idempotente (re-ejecutable sin duplicar)
-- [x] 4 commits atómicos para F3
+- [x] Code review multi-eje (Tezcatlipoca): 24 observaciones resueltas (2 críticas, 9 importantes, 11 sugerencias)
+- [x] 4 commits atómicos + 3 commits de revisión/simplificación para F3
 - [x] Working tree limpio
 
 ---
@@ -75,6 +76,6 @@
 - **Tareas completadas:** 14/14
 - **Checkpoints pasados:** 4/4
 - **Tiempo real:** ~1 día (con fixes de API Metabase)
-- **Tests finales:** 72 (F0) + 67 (F1) + 40 (F2) + 36 (F3) = **215 tests**
-- **Commits:** 4 atómicos para F3
-- **Dashboard:** http://localhost:3000 — 4 paneles funcionales
+- **Tests finales:** 72 (F0) + 68 (F1) + 102 (F2) + 38 (F3) = **280 tests**
+- **Commits:** 4 atómicos para F3 + 3 commits post-revisión (simplificación + fixes Tezcatlipoca)
+- **Dashboard:** http://localhost:3000 — 4 paneles funcionales + 2 Pulses

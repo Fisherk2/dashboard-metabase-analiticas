@@ -1,6 +1,6 @@
 # AGENTS.MD – Dashboard Metabase + Colección Analítica para E-commerce
 
-**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Versión:** 2.2 (F0+F1+F2 done, F3 ready)
+**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Versión:** 2.3 (F0+F1+F2+F3 done, F4 ready)
 
 Panel visual conectado a PostgreSQL que muestra KPIs de inventario, rotación y alertas de stock mínimo para e-commerce simulado. Proyecto de portafolio con datos sintéticos.
 

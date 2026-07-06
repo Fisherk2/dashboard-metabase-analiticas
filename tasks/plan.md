@@ -1,6 +1,6 @@
 # Plan de Ejecución — F3: Interfaces
 
-**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Fase:** F3 (📋 LISTO PARA EJECUTAR)
+**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Fase:** F3 (✅ COMPLETADO)
 **Metodología:** Slicing vertical con checkpoints de calidad (patrón F0/F1/F2)
 **Reemplaza:** N/A (nueva fase)
 **Alcance confirmado:** Setup reproducible vía Metabase API + 4 paneles (3 core + 1 alertas) + 2 Metabase Pulses + export JSON + test suite
@@ -292,16 +292,16 @@ make destroy && make setup && make metabase-setup && make test
 
 **F1: Infraestructura** — ✅ COMPLETADO (10 tasks, 67 tests, 5 commits atómicos)
 **F2: Núcleo** — ✅ COMPLETADO (20 tasks, 6 slices, 8 commits, +40 tests)
-**F3: Interfaces** — 📋 PLAN APROBADO — Listo para ejecutar (14 tasks, 4 slices, 6.5h estimadas)
+**F3: Interfaces** — ✅ COMPLETADO (14 tasks, 4 slices, 4 commits, +38 tests, 4 paneles + 2 Pulses, code review multi-eje con fixes)
 
-**F4: Pruebas** — Próxima fase después de F3. Alcance:
+**F4: Pruebas** — 📋 LISTO PARA PLANIFICAR. Alcance:
 - Validar rendimiento de las 4 queries de dashboard (<2s)
 - Validar exportación de paneles a PNG/CSV
 - Probar flujos de navegación (filtros, drill-down)
 - Validar persistencia tras restart contenedores
 - Probar conexión fallida PostgreSQL + manejo de errores
 
-**Dependencias:** Requiere F3 completado (paneles + pulses operativos).
+**Dependencias:** Requiere F3 completado ✅.
 **Estimación:** 1 día (según WORKFLOW.md F4).
 
 ---
@@ -311,3 +311,4 @@ make destroy && make setup && make metabase-setup && make test
 | Versión | Fecha | Autor | Cambio | Lecciones Aprendidas |
 |---------|-------|-------|--------|---------------------|
 | 1.0 | 2026-07-06 | Fisherk2 | Versión inicial del plan F3 | Slicing vertical con 4 checkpoints permite fail-fast en capa de interfaces; Metabase API REST permite setup 100% reproducible via código; idempotencia check-then-create evita duplicación de recursos en re-ejecuciones; export JSON colección = snapshot portable para disaster recovery |
+| 2.0 | 2026-07-06 | Fisherk2 | F3 completado; F4 listo para planificar | REST API de Metabase requiere manejar edge cases (setup token, parámetros de dashboard, pulsos); source-driven development evitó asumir endpoints incorrectos; code review multi-eje descubrió 24 observaciones incluyendo 2 críticas; PUT /api/dashboard/{id} con negative IDs es el patrón correcto para añadir cards |

@@ -168,13 +168,13 @@ See **[docs/TESTING.md](docs/TESTING.md)** for full strategy.
 
 ## Success Criteria
 
-- [ ] `docker-compose up -d` starts PostgreSQL + Metabase without errors
-- [ ] Metabase connects to PostgreSQL via JDBC successfully
-- [ ] `generate_data.py` populates: 50K–200K fact records, 1K–10K dimension records
-- [ ] Star schema has 8+ tables (3+ fact, 5+ dimension)
-- [ ] Materialized views created and refreshable (`mv_rotacion_mensual`, etc.)
-- [ ] 3+ Metabase dashboards display correct data (rotation, stock, sales)
-- [ ] All dashboard queries load in <2s (validated with `EXPLAIN ANALYZE`)
+- [x] `docker-compose up -d` starts PostgreSQL + Metabase without errors
+- [x] Metabase connects to PostgreSQL via JDBC successfully
+- [x] `generate_data.py` populates: 50K–200K fact records, 1K–10K dimension records
+- [x] Star schema has 8+ tables (3+ fact, 5+ dimension)
+- [x] Materialized views created and refreshable (`mv_rotacion_mensual`, etc.)
+- [x] 3+ Metabase dashboards display correct data (rotation, stock, sales)
+- [x] All dashboard queries load in <2s (validated with `EXPLAIN ANALYZE`)
 - [ ] Export to PNG/CSV works for all panels
 - [ ] Project is reproducible: works on a fresh `docker-compose up`
 
@@ -182,7 +182,7 @@ See **[docs/TESTING.md](docs/TESTING.md)** for full strategy.
 
 | # | Question | Decision |
 |---|----------|----------|
-| 1 | Include optional alert configuration in Metabase? | Defer to F3 |
+| 1 | Include optional alert configuration in Metabase? | ✅ Done in F3: 2 Pulses (Stock Crítico + Resumen Ventas) |
 | 2 | Record video tutorial for portfolio? | Optional (F5) |
 | 3 | Partition `ventas` table by date range? | Recommended for performance demo |
 | 4 | Include `logistica` and `devoluciones` in dashboards? | If time permits (nice-to-have) |
