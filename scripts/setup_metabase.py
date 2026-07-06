@@ -24,6 +24,8 @@ from typing import Any, Optional
 import requests
 from dotenv import load_dotenv
 
+import time
+
 # ─── Constants ────────────────────────────────────────────────
 METABASE_URL = "http://localhost:3000"
 POSTGRES_HOST = "postgres"
@@ -155,6 +157,34 @@ class MetabaseSetup:
     # ── Authentication & Setup ──────────────────────────────
     # Source: GET /api/session/properties, POST /api/setup, POST /api/session
 
+    def wait_for_metabase(self, max_retries: int = 10, delay: int = 3) -> None:
+        """Wait for Metabase to be ready before proceeding.
+
+        Polls GET /api/health up to max_retries times with delay seconds
+        between attempts. Useful after 'docker-compose up' when Metabase
+        is still starting.
+        """
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = requests.get(
+                    f"{self.base_url}/api/health", timeout=5,
+                )
+                if response.status_code == 200:
+                    log.info("Metabase is ready (attempt %d)", attempt)
+                    return
+            except requests.exceptions.ConnectionError:
+                pass
+            if attempt < max_retries:
+                log.info(
+                    "Waiting for Metabase... (attempt %d/%d)",
+                    attempt, max_retries,
+                )
+                time.sleep(delay)
+        raise MetabaseSetupError(
+            f"Metabase not ready after {max_retries} attempts. "
+            f"Check: docker ps | grep metabase"
+        )
+
     def _check_setup_state(self) -> tuple[str, bool]:
         """Check if Metabase has been initialized (first-time setup).
 
@@ -179,17 +209,20 @@ class MetabaseSetup:
         return token, bool(has_user)
 
     def _perform_initial_setup(
-        self, username: str, password: str
+        self, username: str, password: str, token: str | None = None,
     ) -> str:
         """Complete Metabase first-time setup.
 
         POST /api/setup with setup token + admin user.
         Creates the admin user and returns the session token.
+
+        If token is None, fetches it via _check_setup_state().
         """
-        token, has_user = self._check_setup_state()
-        if has_user:
-            log.info("Metabase already set up — skipping initial setup")
-            return self._authenticate(username, password)
+        if token is None:
+            token, has_user = self._check_setup_state()
+            if has_user:
+                log.info("Metabase already set up — skipping initial setup")
+                return self._authenticate(username, password)
 
         if not token:
             raise MetabaseSetupError(
@@ -259,9 +292,9 @@ class MetabaseSetup:
 
         Returns session token string.
         """
-        _, has_user = self._check_setup_state()
+        token, has_user = self._check_setup_state()
         if not has_user:
-            return self._perform_initial_setup(username, password)
+            return self._perform_initial_setup(username, password, token)
         return self._authenticate(username, password)
 
     # ── Database Connection ─────────────────────────────────
@@ -772,10 +805,12 @@ class MetabaseSetup:
         return response.json()["id"]
 
     def export_collection(self, output_path: Path) -> dict[str, Any]:
-        """Export the root collection structure to a JSON file.
+        """Export the root collection items to a JSON file.
 
-        Fetches the collection hierarchy and items recursively,
-        saving the result to output_path.
+        Fetches items from the root collection (Our Analytics) only.
+        Does NOT recursively traverse sub-collections.
+
+        Saves the result to output_path as a portable snapshot.
         """
         root_id = self.get_root_collection_id()
 
@@ -825,7 +860,9 @@ class MetabaseSetup:
         # Step 1: Database connection
         dbname = os.getenv("POSTGRES_DB", "ecommerce-db")
         user = os.getenv("POSTGRES_USER", "ecommerce-fish")
-        password = os.getenv("POSTGRES_PASSWORD", "postgres")
+        password = os.getenv("POSTGRES_PASSWORD")
+        if not password:
+            raise MetabaseSetupError("POSTGRES_PASSWORD not set in environment")
         result["database"] = self.create_database_connection(
             dbname=dbname,
             user=user,
@@ -907,71 +944,75 @@ def main():
     if not any([args.db_only, args.questions, args.dashboard, args.pulses, args.full]):
         args.full = True
 
-    # Read credentials from environment
+    # Read credentials from environment (fail if unset — no hardcoded passwords)
     mb_user = os.getenv("MB_USER", "admin@example.com")
-    # Password must meet Metabase default requirements:
-    # min 8 chars, uppercase, lowercase, digit, not too common
-    mb_password = os.getenv("MB_PASSWORD", "Metabase1")
+    mb_password = os.getenv("MB_PASSWORD")
     pg_db = os.getenv("POSTGRES_DB", "ecommerce-db")
     pg_user = os.getenv("POSTGRES_USER", "ecommerce-fish")
-    pg_password = os.getenv("POSTGRES_PASSWORD", "postgres")
+    pg_password = os.getenv("POSTGRES_PASSWORD")
+
+    # Validate required secrets are set (never use hardcoded passwords)
+    missing = []
+    if not mb_password:
+        missing.append("MB_PASSWORD")
+    if not pg_password:
+        missing.append("POSTGRES_PASSWORD")
+    if missing:
+        log.error(
+            "Missing required environment variables: %s. "
+            "Set them in .env or export before running.",
+            ", ".join(missing),
+        )
+        sys.exit(1)
 
     # Initialize client
     setup = MetabaseSetup()
 
     try:
+        # Wait for Metabase to be ready (useful after docker-compose up)
+        setup.wait_for_metabase()
+
         # Auth
         setup.authenticate(mb_user, mb_password)
 
-        # Database connection
-        if args.db_only or args.full:
-            setup.create_database_connection(
-                dbname=pg_db,
-                user=pg_user,
-                password=pg_password,
-            )
-
-        # Questions
-        cards = []
-        if args.questions or args.full:
-            cards = setup.create_all_questions()
-
-        # Dashboard
-        if args.dashboard or args.full:
-            if not cards and args.dashboard:
-                # Need to fetch existing questions if we're only doing dashboard step
-                existing = setup._get_questions()
-                cards = [q for q in existing if q.get("name") in
-                         [qd["name"] for qd in QUESTIONS]]
-            if cards:
-                setup.setup_dashboard_with_cards(cards)
-            else:
-                log.warning(
-                    "No questions available to add to dashboard. "
-                    "Run --questions first."
-                )
-
-        # Pulses
-        if args.pulses or args.full:
-            if not cards and args.pulses:
-                existing = setup._get_questions()
-                cards = [q for q in existing if q.get("name") in
-                         [qd["name"] for qd in QUESTIONS]]
-            if cards:
-                setup.create_all_pulses(cards)
-            else:
-                log.warning(
-                    "No questions available for pulses. "
-                    "Run --questions first."
-                )
-
-        # Export collection (always at end if --full, or if any resource created)
         if args.full:
-            setup.export_collection(COLLECTION_JSON)
+            # Full pipeline: delegate to full_setup()
+            setup.full_setup()
             log.info("=" * 50)
             log.info("FULL SETUP COMPLETE")
             log.info("Dashboard: http://localhost:3000")
             log.info("=" * 50)
+        else:
+            # Incremental: individual flags
+            cards: list[dict[str, Any]] = []
+
+            if args.db_only:
+                setup.create_database_connection(
+                    dbname=pg_db, user=pg_user, password=pg_password,
+                )
+
+            if args.questions:
+                cards = setup.create_all_questions()
+
+            if args.dashboard:
+                if not cards:
+                    existing = setup._get_questions()
+                    cards = [q for q in existing if q.get("name") in
+                             [qd["name"] for qd in QUESTIONS]]
+                if cards:
+                    setup.setup_dashboard_with_cards(cards)
+                else:
+                    log.warning("No questions available for dashboard.")
+
+            if args.pulses:
+                if not cards:
+                    existing = setup._get_questions()
+                    cards = [q for q in existing if q.get("name") in
+                             [qd["name"] for qd in QUESTIONS]]
+                if cards:
+                    setup.create_all_pulses(cards)
+                else:
+                    log.warning("No questions available for pulses.")
 
     except (
         MetabaseAuthError,
@@ -982,7 +1023,7 @@ def main():
         log.error("Setup failed: %s", e)
         sys.exit(1)
     except Exception as e:
-        log.error("Unexpected error: %s", e)
+        log.exception("Unexpected error during setup: %s", e)
         sys.exit(2)
 
 

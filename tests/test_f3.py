@@ -324,10 +324,9 @@ class TestMetabaseApiRuntime:
 
     @pytest.mark.runtime
     @pytest.mark.timeout(30)
-    def test_create_indexes_script_exists(self, run_cmd):
+    def test_refresh_views_script_exists(self):
         """El script refresh_materialized_views.sql existe para refrescar MVs."""
-        rc, _, _ = run_cmd("test -f scripts/refresh_materialized_views.sql")
-        assert rc == 0, "scripts/refresh_materialized_views.sql not found"
+        assert (PROJECT_ROOT / "scripts" / "refresh_materialized_views.sql").exists()
 
     @pytest.mark.runtime
     @pytest.mark.timeout(30)
