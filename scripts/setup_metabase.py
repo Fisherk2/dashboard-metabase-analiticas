@@ -108,6 +108,15 @@ PULSES = [
     },
 ]
 
+# Dashboard layout: 2x2 grid (row, col, size_x, size_y) for 4 cards
+# Uses a 12-column grid: each card occupies 6 cols x 6 rows
+DASHBOARD_LAYOUT = [
+    (0, 0, 6, 6),   # Card 0: top-left
+    (0, 6, 6, 6),   # Card 1: top-right
+    (6, 0, 6, 6),   # Card 2: bottom-left
+    (6, 6, 6, 6),   # Card 3: bottom-right
+]
+
 # ─── Logging ──────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
@@ -300,18 +309,31 @@ class MetabaseSetup:
     # ── Database Connection ─────────────────────────────────
     # Source: GET /api/database, POST /api/database
 
-    def _get_databases(self) -> list[dict[str, Any]]:
-        """Return list of configured database connections."""
+    def _api_get(self, endpoint: str, timeout: int = 10) -> Any:
+        """Generic GET request to a Metabase API endpoint.
+
+        Returns the parsed JSON response. Handles both list responses
+        and {'data': [...]} wrappers transparently.
+
+        Raises MetabaseApiError on non-200 status.
+        """
         response = requests.get(
-            f"{self.base_url}/api/database",
+            f"{self.base_url}{endpoint}",
             headers=self._headers,
-            timeout=10,
+            timeout=timeout,
         )
         if response.status_code != 200:
             raise MetabaseApiError(
-                "GET /api/database", response.status_code, response.text
+                f"GET {endpoint}", response.status_code, response.text
             )
-        return response.json().get("data", [])
+        data = response.json()
+        if isinstance(data, list):
+            return data
+        return data.get("data", [])
+
+    def _get_databases(self) -> list[dict[str, Any]]:
+        """Return list of configured database connections."""
+        return self._api_get("/api/database")
 
     def _db_name_exists(self, name: str) -> bool:
         """Check if a database with given name already exists (idempotency)."""
@@ -373,25 +395,15 @@ class MetabaseSetup:
 
     def _get_questions(self) -> list[dict[str, Any]]:
         """Return list of saved questions."""
-        response = requests.get(
-            f"{self.base_url}/api/card",
-            headers=self._headers,
-            timeout=10,
-        )
-        if response.status_code != 200:
-            raise MetabaseApiError(
-                "GET /api/card", response.status_code, response.text
-            )
-        data = response.json()
-        # GET /api/card returns a list directly (not wrapped in {"data": [...]})
-        if isinstance(data, list):
-            return data
-        return data.get("data", [])
+        return self._api_get("/api/card")
 
-    def _question_name_exists(self, name: str) -> bool:
-        """Check if a question with given name already exists."""
+    def _get_question_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return a question dict by name, or None if not found."""
         questions = self._get_questions()
-        return any(q.get("name") == name for q in questions)
+        for q in questions:
+            if q.get("name") == name:
+                return q
+        return None
 
     def _get_first_database_id(self) -> int:
         """Return the ID of the first (and expected only) database connection."""
@@ -401,14 +413,6 @@ class MetabaseSetup:
                 "No database connections configured. Run --db-only first."
             )
         return dbs[0]["id"]
-
-    def _get_question_by_name(self, name: str) -> dict[str, Any] | None:
-        """Return a question dict by name, or None if not found."""
-        questions = self._get_questions()
-        for q in questions:
-            if q.get("name") == name:
-                return q
-        return None
 
     def _build_question_payload(
         self,
@@ -547,19 +551,7 @@ class MetabaseSetup:
 
     def _get_dashboards(self) -> list[dict[str, Any]]:
         """Return list of dashboards."""
-        response = requests.get(
-            f"{self.base_url}/api/dashboard",
-            headers=self._headers,
-            timeout=10,
-        )
-        if response.status_code != 200:
-            raise MetabaseApiError(
-                "GET /api/dashboard", response.status_code, response.text
-            )
-        data = response.json()
-        if isinstance(data, list):
-            return data
-        return data.get("data", [])
+        return self._api_get("/api/dashboard")
 
     def _dashboard_name_exists(self, name: str) -> bool:
         """Check if a dashboard with given name already exists."""
@@ -621,12 +613,6 @@ class MetabaseSetup:
             raise MetabaseSetupError("Dashboard creation returned no ID")
 
         dash_id = dashboard["id"]
-        layout = [
-            (0, 0, 6, 6),    # Card 0: top-left
-            (0, 6, 6, 6),    # Card 1: top-right
-            (6, 0, 6, 6),    # Card 2: bottom-left
-            (6, 6, 6, 6),    # Card 3: bottom-right
-        ]
 
         # Build dashcards array with temporary negative IDs
         dashcards = []
@@ -635,7 +621,7 @@ class MetabaseSetup:
             if not card_id:
                 log.warning("Card at index %d has no ID — skipping", i)
                 continue
-            row, col, sx, sy = layout[i]
+            row, col, sx, sy = DASHBOARD_LAYOUT[i]
             dashcards.append({
                 "id": -(i + 1),  # temporary negative ID for new dashcards
                 "card_id": card_id,
@@ -684,19 +670,7 @@ class MetabaseSetup:
 
     def _get_pulses(self) -> list[dict[str, Any]]:
         """Return list of configured pulses."""
-        response = requests.get(
-            f"{self.base_url}/api/pulse",
-            headers=self._headers,
-            timeout=10,
-        )
-        if response.status_code != 200:
-            raise MetabaseApiError(
-                "GET /api/pulse", response.status_code, response.text
-            )
-        data = response.json()
-        if isinstance(data, list):
-            return data
-        return data.get("data", [])
+        return self._api_get("/api/pulse")
 
     def _pulse_name_exists(self, name: str) -> bool:
         """Check if a pulse with given name already exists."""
@@ -707,7 +681,7 @@ class MetabaseSetup:
         self,
         name: str,
         cards: list[dict[str, Any]],
-        card_indices: list[int],
+        card_index: int,
         schedule_hour: int = 9,
         schedule_day: str = "mon,tue,wed,thu,fri",
     ) -> dict[str, Any]:
@@ -716,7 +690,7 @@ class MetabaseSetup:
         If a pulse with the same name exists, skips (idempotent).
 
         POST /api/pulse.
-        Cards are referenced by ID from the card list.
+        card_index references the card by position in the cards list.
         Schedule: daily at specified hour on specified days.
         Channel: email to admin (config-only, no SMTP required).
         """
@@ -725,19 +699,16 @@ class MetabaseSetup:
             pulses = self._get_pulses()
             return next(p for p in pulses if p.get("name") == name)
 
-        pulse_cards = []
-        for idx in card_indices:
-            if idx < len(cards) and cards[idx].get("id"):
-                pulse_cards.append({
-                    "id": cards[idx]["id"],
-                    "include_csv": False,
-                    "include_xls": False,
-                })
-
-        if not pulse_cards:
+        if not (0 <= card_index < len(cards) and cards[card_index].get("id")):
             raise MetabaseSetupError(
-                f"No valid cards to attach to pulse '{name}'"
+                f"No valid card at index {card_index} for pulse '{name}'"
             )
+
+        pulse_cards = [{
+            "id": cards[card_index]["id"],
+            "include_csv": False,
+            "include_xls": False,
+        }]
 
         payload = {
             "name": name,
@@ -780,7 +751,7 @@ class MetabaseSetup:
             pulse = self.create_pulse(
                 name=p_def["name"],
                 cards=cards,
-                card_indices=[p_def["card_index"]],
+                card_index=p_def["card_index"],
                 schedule_hour=p_def["schedule_hour"],
                 schedule_day=p_def["schedule_day"],
             )
