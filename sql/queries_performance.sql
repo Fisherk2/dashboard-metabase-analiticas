@@ -18,6 +18,7 @@
 -- Query 1: Rotación por Categoría
 -- Panel:  Rotación por Categoría (bar chart)
 -- MV:     mv_rotacion_mensual
+-- Nota:   mes usa nombres en español (Enero, Febrero, Marzo, ...)
 -- =============================================================================
 
 EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
@@ -30,7 +31,7 @@ SELECT
     productos_vendidos
 FROM mv_rotacion_mensual
 WHERE anio = '2026'
-  AND mes = '03'
+  AND mes = 'Marzo'
 ORDER BY ventas_totales DESC;
 
 -- Resultados esperados:
@@ -38,11 +39,11 @@ ORDER BY ventas_totales DESC;
 --   Tiempo: <50ms
 --
 -- Resultados reales:
---   (completar tras ejecución con psql)
---   Tiempo planificación: ___ms
---   Tiempo ejecución: ___ms
---   Buffers: shared hit=__ read=__
---   Filas: __
+--   Tiempo planificación: 0.531ms
+--   Tiempo ejecución: 0.207ms
+--   Buffers: shared hit=6 (planning: hit=101)
+--   Filas: 20 (240 eliminadas por filtro)
+--   Plan: Seq Scan + Sort (no index for (anio, mes) on MV)
 
 
 -- =============================================================================
@@ -69,11 +70,11 @@ ORDER BY stock_actual ASC;
 --   Tiempo: <50ms
 --
 -- Resultados reales:
---   (completar tras ejecución con psql)
---   Tiempo planificación: ___ms
---   Tiempo ejecución: ___ms
---   Buffers: shared hit=__ read=__
---   Filas: __
+--   Tiempo planificación: 0.813ms
+--   Tiempo ejecución: 0.433ms
+--   Buffers: shared hit=75 (planning: hit=182 dirtied=3)
+--   Filas: 132
+--   Plan: Index Scan using idx_mv_stock_estado (Index Cond: estado = ANY ('{ALERTA,PRECAUCION}'::text[]))
 
 
 -- =============================================================================
@@ -99,11 +100,11 @@ LIMIT 10;
 --   Tiempo: <20ms
 --
 -- Resultados reales:
---   (completar tras ejecución con psql)
---   Tiempo planificación: ___ms
---   Tiempo ejecución: ___ms
---   Buffers: shared hit=__ read=__
---   Filas: __
+--   Tiempo planificación: 0.386ms
+--   Tiempo ejecución: 0.073ms
+--   Buffers: shared hit=1 read=2 (planning: hit=56 dirtied=2)
+--   Filas: 10 (Limit)
+--   Plan: Index Scan using idx_mv_top_productos_ranking (index backward scan is implicit)
 
 
 -- =============================================================================
@@ -131,12 +132,13 @@ ORDER BY p.stock_actual ASC;
 --   Tiempo: <200ms
 --
 -- Resultados reales:
---   (completar tras ejecución con psql)
---   Tiempo planificación: ___ms
---   Tiempo ejecución: ___ms
---   Buffers: shared hit=__ read=__
---   Filas: __
---   Nested Loop: ___
+--   Tiempo planificación: 0.666ms
+--   Tiempo ejecución: 1.716ms
+--   Buffers: shared hit=88 (planning: hit=112)
+--   Filas: 114 (4886 eliminadas por filtro)
+--   Plan: Hash Join (Hash Cond: p.proveedor_id = pr.id)
+--         → Seq Scan on productos (Filter: stock_actual <= stock_minimo)
+--         → Hash → Seq Scan on proveedores
 
 
 -- =============================================================================
@@ -146,9 +148,9 @@ ORDER BY p.stock_actual ASC;
 --
 -- | Query | Plan | Tiempo | Buffers | <2s? |
 -- |-------|------|--------|---------|------|
--- | 1 Rotación | Index Scan | ___ms | hit=__, read=__ | ✅ |
--- | 2 Stock | Index Scan | ___ms | hit=__, read=__ | ✅ |
--- | 3 Top 10 | Index Scan Backward | ___ms | hit=__, read=__ | ✅ |
--- | 4 Alertas | Nested Loop + Index Scans | ___ms | hit=__, read=__ | ✅ |
+-- | 1 Rotación | Seq Scan + Sort | 0.207ms | hit=6 | ✅ |
+-- | 2 Stock | Index Scan (idx_mv_stock_estado) | 0.433ms | hit=75 | ✅ |
+-- | 3 Top 10 | Index Scan (idx_mv_top_productos_ranking) | 0.073ms | hit=1 read=2 | ✅ |
+-- | 4 Alertas | Hash Join + Seq Scans | 1.716ms | hit=88 | ✅ |
 --
--- Todos cumplen <2s: ✅ / ❌
+-- Todos cumplen <2s: ✅

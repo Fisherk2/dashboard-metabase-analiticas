@@ -36,7 +36,6 @@ import requests
 
 DEFAULT_MB_URL = "http://localhost:3000"
 PG_CONTAINER = "metabase-postgres"
-MB_CONTAINER = "metabase"
 
 MB_USER = os.getenv("MB_USER", "")
 MB_PASSWORD = os.getenv("MB_PASSWORD", "")
@@ -179,8 +178,9 @@ def test_metabase_error_on_pg_down() -> bool:
     # Check: response should contain a meaningful error message
     has_message = _has_meaningful_message(body)
     if not has_message:
-        print(f"  WARN: Response may lack user-friendly message (status={status})")
-        print(f"  Body: {body[:200]}")
+        log_error("Response lacks user-friendly error message")
+        log_error(f"Body: {body[:300]}")
+        return False
 
     log_info(f"Metabase error handling: HTTP {status} with message (no raw trace)")
     return True
@@ -224,7 +224,7 @@ def test_metabase_recovery() -> bool:
                 if data.get("status") == "ok":
                     log_info("Metabase recovered and healthy")
                     return True
-        except requests.ConnectionError:
+        except (requests.ConnectionError, ValueError):
             pass
         time.sleep(3)
 

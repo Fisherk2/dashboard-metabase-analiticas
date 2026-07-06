@@ -100,7 +100,6 @@ def _validate_csv_export(
     config: dict,
     token: str,
     card_id: int,
-    card_name: str,
 ) -> tuple[int, str]:
     """Download CSV export of a card and validate it.
 
@@ -135,7 +134,6 @@ def _validate_xlsx_export(
     config: dict,
     token: str,
     card_id: int,
-    card_name: str,
 ) -> tuple[int, str]:
     """Download XLSX export and validate it's non-empty.
 
@@ -223,8 +221,8 @@ def main():
         card_id = card["id"]
         card_name = card.get("name", f"Card #{card_id}")
 
-        csv_result = _validate_csv_export(config, token, card_id, card_name)
-        xlsx_result = _validate_xlsx_export(config, token, card_id, card_name)
+        csv_result = _validate_csv_export(config, token, card_id)
+        xlsx_result = _validate_xlsx_export(config, token, card_id)
         ok = _print_row(card_name, csv_result, xlsx_result)
         if ok:
             passed += 1

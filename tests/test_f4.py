@@ -339,11 +339,6 @@ class TestTestSuiteF4:
             "Missing 'runtime' marker registration in conftest.py"
         )
 
-    def test_all_queries_permitted(self):
-        """All F4 tests must be passing (checked by test runner)."""
-        # This is a placeholder — the actual check happens when pytest runs
-        pass
-
 
 # ═══════════════════════════════════════════════════════════════
 # Runtime Tests (requieren Docker)

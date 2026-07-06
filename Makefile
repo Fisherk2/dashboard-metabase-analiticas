@@ -117,7 +117,7 @@ test: ## Ejecutar suite de tests (pytest)
 test-queries: ## Validar rendimiento de queries críticas (p95 <2s via measure_query_performance.py)
 	@echo "=== Validación de rendimiento: Dashboard Queries ==="
 	@docker info >/dev/null 2>&1 || { echo "ERROR: Docker no disponible. Este target requiere Docker."; exit 1; }
-	$(PYTHON) scripts/measure_query_performance.py
+	$(GENERATOR) python /scripts/measure_query_performance.py
 
 test-integrity: ## Validar integridad referencial
 	@echo "=== Validación de integridad referencial ==="

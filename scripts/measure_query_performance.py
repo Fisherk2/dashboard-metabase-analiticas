@@ -35,7 +35,7 @@ DASHBOARD_QUERIES = [
             SELECT categoria, mes, anio, ventas_totales, ingresos_totales,
                    productos_vendidos
             FROM mv_rotacion_mensual
-            WHERE anio = '2026' AND mes = '03'
+            WHERE anio = '2026' AND mes = 'Marzo'
             ORDER BY ventas_totales DESC
         """,
     },
