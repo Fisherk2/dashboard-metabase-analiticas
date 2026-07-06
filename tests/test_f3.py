@@ -123,14 +123,14 @@ class TestSetupMetabaseScript:
                 )
 
     def test_setup_has_add_card_to_dashboard_method(self):
-        """MetabaseSetup define add_card_to_dashboard()."""
+        """MetabaseSetup define setup_dashboard_with_cards() (replaces add_card_to_dashboard)."""
         source = SETUP_SCRIPT.read_text()
         tree = ast.parse(source)
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
                 methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                assert "add_card_to_dashboard" in methods, (
-                    f"Missing 'add_card_to_dashboard' method. Found: {methods}"
+                assert "setup_dashboard_with_cards" in methods, (
+                    f"Missing 'setup_dashboard_with_cards' method. Found: {methods}"
                 )
 
     def test_setup_has_create_pulse_method(self):

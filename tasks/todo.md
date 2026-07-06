@@ -7,19 +7,19 @@
 
 ## Slice 1: Setup Reproductible vía Metabase API (3 h)
 
-- [ ] **F3-01** — Crear `scripts/setup_metabase.py`: clase `MetabaseSetup`, `authenticate()` (POST /api/session), `create_database_connection()` con .env. Target: PostgreSQL host=postgres port=5432
-- [ ] **F3-02** — Añadir `create_question(name, sql, db_id, display_type)`: crea 4 saved queries con display types (bar/table/row). SQL con `{{variable}}` syntax
-- [ ] **F3-03** — Añadir `create_dashboard(name)` + `add_card_to_dashboard()`: layout 2x2 grid. Export JSON completo a `metabase/collections/dashboard_ecommerce.json`
-- [ ] **F3-04** — Añadir target `metabase-setup` al Makefile. Validar idempotencia: check-then-create (no duplicar DB/questions/dashboard)
+- [x] **F3-01** — Crear `scripts/setup_metabase.py`: clase `MetabaseSetup`, `authenticate()` (POST /api/session), `create_database_connection()` con .env. Target: PostgreSQL host=postgres port=5432
+- [x] **F3-02** — Añadir `create_question(name, sql, db_id, display_type)`: crea 4 saved queries con display types (bar/table/row). SQL con `{{variable}}` syntax
+- [x] **F3-03** — Añadir `create_dashboard(name)` + `add_card_to_dashboard()`: layout 2x2 grid. Export JSON completo a `metabase/collections/dashboard_ecommerce.json`
+- [x] **F3-04** — Añadir target `metabase-setup` al Makefile. Validar idempotencia: check-then-create (no duplicar DB/questions/dashboard)
 
-## Checkpoint 1: Setup Funcional ✅
+## Checkpoint 1: Setup Funcional ⏳
 
-- [ ] `make metabase-setup` exit 0 (setup completo desde cero)
-- [ ] `make metabase-setup` segunda vez no duplica (idempotente)
-- [ ] `GET /api/database` retorna 1 DB connection
-- [ ] `GET /api/card` retorna 4 questions
-- [ ] `GET /api/dashboard` retorna 1 dashboard con 4 cards
-- [ ] `metabase/collections/dashboard_ecommerce.json` existe con JSON válido
+- [ ] `make metabase-setup` exit 0 (setup completo desde cero) — Pendiente runtime
+- [ ] `make metabase-setup` segunda vez no duplica (idempotente) — Pendiente runtime
+- [ ] `GET /api/database` retorna 1 DB connection — Pendiente runtime
+- [ ] `GET /api/card` retorna 4 questions — Pendiente runtime
+- [ ] `GET /api/dashboard` retorna 1 dashboard con 4 cards — Pendiente runtime
+- [ ] `metabase/collections/dashboard_ecommerce.json` existe con JSON válido ✅
 
 ---
 

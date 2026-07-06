@@ -149,15 +149,86 @@ class MetabaseSetup:
         self.session_token: Optional[str] = None
         self._headers: dict[str, str] = {"Content-Type": "application/json"}
 
-    # ── Authentication ──────────────────────────────────────
-    # Source: POST /api/session
+    # ── Authentication & Setup ──────────────────────────────
+    # Source: GET /api/session/properties, POST /api/setup, POST /api/session
 
-    def authenticate(self, username: str, password: str) -> str:
-        """Authenticate with Metabase and store session token.
+    def _check_setup_state(self) -> tuple[str, bool]:
+        """Check if Metabase has been initialized (first-time setup).
 
-        POST /api/session with {username, password}
-        Returns session token string.
+        GET /api/session/properties.
+        Returns (setup_token, has_user_setup).
+        - If not set up: (token_str, False) where token_str is the setup token
+        - If set up: (None, True)
+        """
+        response = requests.get(
+            f"{self.base_url}/api/session/properties",
+            timeout=10,
+        )
+        if response.status_code != 200:
+            raise MetabaseApiError(
+                "GET /api/session/properties",
+                response.status_code,
+                response.text,
+            )
+        props = response.json()
+        token = props.get("setup-token")
+        has_user = props.get("has-user-setup", False)
+        return token, bool(has_user)
 
+    def _perform_initial_setup(
+        self, username: str, password: str
+    ) -> str:
+        """Complete Metabase first-time setup.
+
+        POST /api/setup with setup token + admin user.
+        Creates the admin user and returns the session token.
+        """
+        token, has_user = self._check_setup_state()
+        if has_user:
+            log.info("Metabase already set up — skipping initial setup")
+            return self._authenticate(username, password)
+
+        if not token:
+            raise MetabaseSetupError(
+                "No setup token available and no user configured. "
+                "Check Metabase state."
+            )
+
+        payload = {
+            "token": token,
+            "user": {
+                "first_name": "Admin",
+                "last_name": "User",
+                "email": username,
+                "password": password,
+            },
+            "prefs": {
+                "site_name": "E-commerce Analytics",
+                "allow_tracking": False,
+            },
+            "database": None,
+            "invite": None,
+        }
+        response = requests.post(
+            f"{self.base_url}/api/setup",
+            json=payload,
+            timeout=15,
+        )
+        if response.status_code not in (200, 201):
+            raise MetabaseSetupError(
+                f"Initial setup failed (HTTP {response.status_code}): "
+                f"{response.text[:300]}"
+            )
+        data = response.json()
+        self.session_token = data.get("id", "")
+        self._headers["X-Metabase-Session"] = self.session_token
+        log.info("Metabase initial setup complete — admin user created")
+        return self.session_token
+
+    def _authenticate(self, username: str, password: str) -> str:
+        """Authenticate with existing Metabase credentials.
+
+        POST /api/session with {username, password}.
         Raises MetabaseAuthError if credentials are invalid.
         """
         response = requests.post(
@@ -175,6 +246,20 @@ class MetabaseSetup:
         self._headers["X-Metabase-Session"] = self.session_token
         log.info("Authenticated with Metabase as %s", username)
         return self.session_token
+
+    def authenticate(self, username: str, password: str) -> str:
+        """Authenticate with Metabase, handling initial setup if needed.
+
+        First checks if Metabase has been set up.
+        If not, performs initial setup via POST /api/setup.
+        Otherwise, authenticates via POST /api/session.
+
+        Returns session token string.
+        """
+        _, has_user = self._check_setup_state()
+        if not has_user:
+            return self._perform_initial_setup(username, password)
+        return self._authenticate(username, password)
 
     # ── Database Connection ─────────────────────────────────
     # Source: GET /api/database, POST /api/database
@@ -261,7 +346,11 @@ class MetabaseSetup:
             raise MetabaseApiError(
                 "GET /api/card", response.status_code, response.text
             )
-        return response.json().get("data", [])
+        data = response.json()
+        # GET /api/card returns a list directly (not wrapped in {"data": [...]})
+        if isinstance(data, list):
+            return data
+        return data.get("data", [])
 
     def _question_name_exists(self, name: str) -> bool:
         """Check if a question with given name already exists."""
@@ -359,7 +448,10 @@ class MetabaseSetup:
             raise MetabaseApiError(
                 "GET /api/dashboard", response.status_code, response.text
             )
-        return response.json().get("data", [])
+        data = response.json()
+        if isinstance(data, list):
+            return data
+        return data.get("data", [])
 
     def _dashboard_name_exists(self, name: str) -> bool:
         """Check if a dashboard with given name already exists."""
@@ -402,59 +494,18 @@ class MetabaseSetup:
         log.info("Dashboard '%s' created (id=%s)", name, dashboard.get("id"))
         return dashboard
 
-    def add_card_to_dashboard(
-        self,
-        dashboard_id: int,
-        card_id: int,
-        row: int = 0,
-        col: int = 0,
-        size_x: int = 6,
-        size_y: int = 6,
-    ) -> dict[str, Any]:
-        """Add a question card to a dashboard.
-
-        POST /api/dashboard/:id/cards.
-        Layout uses a 12-column grid: size_x=6 means half width,
-        size_y=6 means approximately half height.
-
-        Returns the created dashboard tab dict.
-        """
-        payload = {
-            "cardId": card_id,
-            "row": row,
-            "col": col,
-            "size_x": size_x,
-            "size_y": size_y,
-        }
-        response = requests.post(
-            f"{self.base_url}/api/dashboard/{dashboard_id}/cards",
-            headers=self._headers,
-            json=payload,
-            timeout=15,
-        )
-        if response.status_code not in (200, 201):
-            raise MetabaseApiError(
-                f"POST /api/dashboard/{dashboard_id}/cards",
-                response.status_code,
-                response.text,
-            )
-        result = response.json()
-        log.info(
-            "Card %d added to dashboard %d at (%d, %d)",
-            card_id, dashboard_id, row, col,
-        )
-        return result
-
-    def setup_dashboard_with_cards(
-        self, cards: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def setup_dashboard_with_cards(self, cards: list[dict[str, Any]]) -> dict[str, Any]:
         """Create dashboard and add all cards in a 2x2 grid layout.
 
-        Layout:
+        First creates/reuses the dashboard via POST /api/dashboard.
+        Then adds all cards via PUT /api/dashboard/{id} with temporary
+        negative IDs (Metabase frontend pattern for new dashcards).
+
+        Layout (12-column grid):
           [Card 0  ] [Card 1  ]  row 0
           [Card 2  ] [Card 3  ]  row 6
 
-        Each card occupies 6 cols x 6 rows in a 12-col grid.
+        Each card occupies 6 cols x 6 rows.
         """
         dashboard = self.create_dashboard()
 
@@ -469,23 +520,56 @@ class MetabaseSetup:
             (6, 6, 6, 6),    # Card 3: bottom-right
         ]
 
+        # Build dashcards array with temporary negative IDs
+        dashcards = []
         for i, card_data in enumerate(cards[:4]):
             card_id = card_data.get("id")
             if not card_id:
                 log.warning("Card at index %d has no ID — skipping", i)
                 continue
             row, col, sx, sy = layout[i]
-            try:
-                self.add_card_to_dashboard(dash_id, card_id, row, col, sx, sy)
-            except MetabaseApiError as e:
-                # Card may already be on dashboard (idempotent)
-                if "already" in str(e).lower():
-                    log.info("Card %d already on dashboard — skipping", card_id)
-                else:
-                    raise
+            dashcards.append({
+                "id": -(i + 1),  # temporary negative ID for new dashcards
+                "card_id": card_id,
+                "row": row,
+                "col": col,
+                "size_x": sx,
+                "size_y": sy,
+                "series": [],
+                "parameter_mappings": [],
+                "visualization_settings": {},
+            })
 
-        log.info("Dashboard setup complete with %d cards", min(len(cards), 4))
-        return dashboard
+        if not dashcards:
+            log.warning("No cards to add to dashboard")
+            return dashboard
+
+        # Use PUT /api/dashboard/{id} to save dashcards
+        # Source: Metabase frontend uses this pattern with temp negative IDs
+        payload = {
+            "name": dashboard.get("name", "E-commerce Analytics"),
+            "description": dashboard.get("description", ""),
+            "dashcards": dashcards,
+        }
+        response = requests.put(
+            f"{self.base_url}/api/dashboard/{dash_id}",
+            headers=self._headers,
+            json=payload,
+            timeout=15,
+        )
+        if response.status_code != 200:
+            raise MetabaseApiError(
+                f"PUT /api/dashboard/{dash_id}",
+                response.status_code,
+                response.text,
+            )
+        updated = response.json()
+        cards_added = len(updated.get("dashcards", []))
+        log.info(
+            "Dashboard %d updated with %d cards",
+            dash_id, cards_added,
+        )
+        return updated
 
     # ── Pulses (Alerts) ─────────────────────────────────────
     # Source: POST /api/pulse
@@ -501,7 +585,10 @@ class MetabaseSetup:
             raise MetabaseApiError(
                 "GET /api/pulse", response.status_code, response.text
             )
-        return response.json().get("data", [])
+        data = response.json()
+        if isinstance(data, list):
+            return data
+        return data.get("data", [])
 
     def _pulse_name_exists(self, name: str) -> bool:
         """Check if a pulse with given name already exists."""
@@ -746,8 +833,10 @@ def main():
         args.full = True
 
     # Read credentials from environment
-    mb_user = os.getenv("MB_USER", "admin@local")
-    mb_password = os.getenv("MB_PASSWORD", "admin")
+    mb_user = os.getenv("MB_USER", "admin@example.com")
+    # Password must meet Metabase default requirements:
+    # min 8 chars, uppercase, lowercase, digit, not too common
+    mb_password = os.getenv("MB_PASSWORD", "Metabase1")
     pg_db = os.getenv("POSTGRES_DB", "ecommerce-db")
     pg_user = os.getenv("POSTGRES_USER", "ecommerce-fish")
     pg_password = os.getenv("POSTGRES_PASSWORD", "postgres")
