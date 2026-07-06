@@ -126,17 +126,21 @@ class TestInitSql:
         )
         assert create_count >= 6, f"Expected >=6 dimension tables, found {create_count}"
 
-    def test_init_sql_is_valid_syntax(self, root: Path):
-        """init.sql tiene estructura básica válida (comentarios, punto y coma)."""
+    def test_init_sql_create_tables_end_with_semicolon(self, root: Path):
+        """Cada bloque CREATE TABLE termina con );"""
         content = (root / self.INIT_SQL_PATH).read_text()
         lines = content.splitlines()
-        # Every statement should end with semicolon for non-comment lines
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
-            if stripped and not stripped.startswith("--") and not stripped.startswith("/*"):
-                # Lines that are just opening parentheses or continue previous aren't statements
-                pass
-        assert True  # If we reach here, file is readable
+            # Every CREATE TABLE line should eventually be closed by );
+            if stripped.upper().startswith("CREATE TABLE"):
+                # Find the matching closing line
+                found_close = False
+                for j in range(i, len(lines)):
+                    if lines[j].strip() == ");":
+                        found_close = True
+                        break
+                assert found_close, f"CREATE TABLE at line {i} missing closing ');'"
 
     @pytest.mark.parametrize("table,expected_column", [
         ("productos", "precio"),
@@ -384,7 +388,7 @@ class TestGenerateDataRuntime:
     def test_generate_data_runs_without_errors(self, root, run_cmd):
         """El script genera datos sin errores (modo --debug)."""
         rc, stdout, stderr = run_cmd(
-            f"python {root / self.GEN_PATH} --debug --scale 0.1",
+            "docker exec -i metabase-generator python /scripts/generate_data.py --debug --scale 0.1",
             timeout=300
         )
         assert rc == 0, (
@@ -396,7 +400,7 @@ class TestGenerateDataRuntime:
     def test_generate_data_reports_counts(self, root, run_cmd):
         """El script reporta conteos de registros generados."""
         rc, stdout, stderr = run_cmd(
-            f"python {root / self.GEN_PATH} --debug --scale 0.1",
+            "docker exec -i metabase-generator python /scripts/generate_data.py --debug --scale 0.1",
             timeout=300
         )
         assert rc == 0
@@ -409,7 +413,7 @@ class TestGenerateDataRuntime:
     def test_generate_data_reset_works(self, root, run_cmd):
         """El modo --reset ejecuta TRUNCATE CASCADE sin errores."""
         rc, stdout, stderr = run_cmd(
-            f"python {root / self.GEN_PATH} --reset --debug --scale 0.1",
+            "docker exec -i metabase-generator python /scripts/generate_data.py --reset --debug --scale 0.1",
             timeout=300
         )
         assert rc == 0, (
@@ -418,9 +422,11 @@ class TestGenerateDataRuntime:
 
     @pytest.mark.runtime
     def test_can_import_required_libraries(self, root, run_cmd):
-        """Los módulos requeridos son importables desde el Python del proyecto."""
-        rc, stdout, _ = run_cmd("python -c 'import faker; import psycopg2; import dotenv; print(\"OK\")'")
-        assert rc == 0 and "OK" in stdout, "Cannot import required libraries"
+        """Los módulos requeridos son importables desde el contenedor data-generator."""
+        rc, stdout, _ = run_cmd(
+            "docker exec -i metabase-generator python -c 'import faker; import psycopg2; import dotenv; print(\"OK\")'"
+        )
+        assert rc == 0 and "OK" in stdout, "Cannot import required libraries in container"
 
 
 # ─── Slice 3: Indexes ───────────────────────────────────────

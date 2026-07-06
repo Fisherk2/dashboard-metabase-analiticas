@@ -28,3 +28,4 @@ def run_cmd():
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line("markers", "runtime: marks tests that require Docker daemon (skipped if not available)")
+    config.addinivalue_line("markers", "timeout: mark test with timeout in seconds (provided by pytest-timeout)")
