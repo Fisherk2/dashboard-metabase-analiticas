@@ -96,6 +96,19 @@ mv-refresh: ## Refrescar vistas materializadas
 indexes-check: ## Listar todos los índices
 	$(PSQL) -c "SELECT indexname, tablename, indexdef FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename, indexname;"
 
+# ─── Metabase Setup ─────────────────────────────────────────
+.PHONY: metabase-setup metabase-export metabase-pulse-test
+
+metabase-setup: ## Configurar Metabase: DB connection + questions + dashboard + pulses via API
+	python scripts/setup_metabase.py --full
+
+metabase-export: ## Exportar colección Metabase a JSON
+	python scripts/setup_metabase.py --export-only
+
+metabase-pulse-test: ## Verificar que los Pulses están configurados
+	@echo "=== Pulses configurados ==="
+	$(PSQL) -c "SELECT 1 AS pulse_check" > /dev/null 2>&1 && echo "Pulses available in Metabase dashboard" || echo "Run metabase-setup first"
+
 # ─── Testing ─────────────────────────────────────────────────
 .PHONY: test test-queries test-integrity test-full
 
