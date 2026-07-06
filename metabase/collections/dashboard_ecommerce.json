@@ -12,7 +12,7 @@
       "is_remote_synced": false,
       "dashboard_count": 1,
       "fully_parameterized": true,
-      "last_used_at": "2026-07-06T21:24:20.308273Z",
+      "last_used_at": "2026-07-06T21:25:15.121364Z",
       "dashboard": null,
       "can_restore": false,
       "moderated_status": null,
@@ -25,7 +25,7 @@
         "last_name": "User",
         "first_name": "Admin",
         "email": "admin@example.com",
-        "timestamp": "2026-07-06T21:24:20.336807Z"
+        "timestamp": "2026-07-06T21:37:40.801208Z"
       },
       "location": null,
       "collection_namespace": null,
@@ -56,7 +56,7 @@
       "collection_id": null,
       "name": "E-commerce Analytics",
       "is_remote_synced": false,
-      "last_used_at": "2026-07-06T21:22:41.651211Z",
+      "last_used_at": "2026-07-06T21:24:49.520195Z",
       "can_restore": false,
       "is_tenant_dashboard": false,
       "moderated_status": null,
@@ -67,7 +67,7 @@
         "last_name": "User",
         "first_name": "Admin",
         "email": "admin@example.com",
-        "timestamp": "2026-07-06T21:24:20.598739Z"
+        "timestamp": "2026-07-06T21:37:40.967048Z"
       },
       "location": "/",
       "namespace": null,
@@ -130,7 +130,7 @@
       "is_remote_synced": false,
       "dashboard_count": 1,
       "fully_parameterized": true,
-      "last_used_at": "2026-07-06T21:24:18.469694Z",
+      "last_used_at": "2026-07-06T21:25:01.682499Z",
       "dashboard": null,
       "can_restore": false,
       "moderated_status": null,
@@ -143,7 +143,7 @@
         "last_name": "User",
         "first_name": "Admin",
         "email": "admin@example.com",
-        "timestamp": "2026-07-06T21:24:18.5058Z"
+        "timestamp": "2026-07-06T21:37:39.59432Z"
       },
       "location": null,
       "collection_namespace": null,
@@ -162,7 +162,7 @@
       "is_remote_synced": false,
       "dashboard_count": 1,
       "fully_parameterized": true,
-      "last_used_at": "2026-07-06T21:22:41.697027Z",
+      "last_used_at": "2026-07-06T21:24:49.624394Z",
       "dashboard": null,
       "can_restore": false,
       "moderated_status": null,
@@ -175,7 +175,7 @@
         "last_name": "User",
         "first_name": "Admin",
         "email": "admin@example.com",
-        "timestamp": "2026-07-06T21:24:19.237224Z"
+        "timestamp": "2026-07-06T21:37:39.966787Z"
       },
       "location": null,
       "collection_namespace": null,
@@ -194,7 +194,7 @@
       "is_remote_synced": false,
       "dashboard_count": 1,
       "fully_parameterized": true,
-      "last_used_at": "2026-07-06T21:22:41.697027Z",
+      "last_used_at": "2026-07-06T21:25:08.838084Z",
       "dashboard": null,
       "can_restore": false,
       "moderated_status": null,
@@ -207,7 +207,7 @@
         "last_name": "User",
         "first_name": "Admin",
         "email": "admin@example.com",
-        "timestamp": "2026-07-06T21:24:19.823492Z"
+        "timestamp": "2026-07-06T21:37:40.415225Z"
       },
       "location": null,
       "collection_namespace": null,
