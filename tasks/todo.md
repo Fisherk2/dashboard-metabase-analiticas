@@ -1,81 +1,72 @@
-# TODO — F3: Interfaces
+# TODO — F4: Pruebas
 
-**Fecha:** 2026-07-06 | **Estado:** ✅ COMPLETADO
+**Fecha:** 2026-07-06 | **Estado:** 📋 LISTO PARA EJECUTAR
 **Referencia:** [plan.md](plan.md)
 
 ---
 
-## Slice 1: Setup Reproductible vía Metabase API
+## Slice 1: Performance Validation
 
-- [x] **F3-01** — Crear `scripts/setup_metabase.py`: clase `MetabaseSetup`, `authenticate()` (POST /api/session), `create_database_connection()`
-- [x] **F3-02** — `create_question()` con 4 saved queries (bar/table/row) con parámetros + template_tags
-- [x] **F3-03** — `setup_dashboard_with_cards()` layout 2x2 grid. Export JSON a `metabase/collections/dashboard_ecommerce.json`
-- [x] **F3-04** — Target `metabase-setup` en Makefile. Idempotencia check-then-create + PUT update
+- [ ] **F4-01** — Crear `sql/queries_performance.sql` con `EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)` de las 4 queries (separado del F3)
+- [ ] **F4-02** — `scripts/measure_query_performance.py`: corre cada query N=10 veces, calcula p50/p95/p99, exit 1 si p95 >2s
+- [ ] **F4-03** — Reemplazar target `make test-queries` (placeholder) por invocación al script
 
-## Checkpoint 1: Setup Funcional ✅
+## Checkpoint 1: Performance Validado ✅
 
-- [x] `python scripts/setup_metabase.py --full` exit 0
-- [x] Idempotente (no duplica recursos)
-- [x] `GET /api/database` retorna 1 DB connection
-- [x] `GET /api/card` retorna 4 questions
-- [x] `GET /api/dashboard` retorna 1 dashboard con 4 cards
-- [x] JSON colección exportado y válido
+- [ ] `make test-queries` exit 0
+- [ ] p95 <2s en las 4 queries
+- [ ] Plan de ejecución usa Index Scan (no Seq Scan) en tablas >1000 filas
+- [ ] `sql/queries_performance.sql` documenta planes esperados vs reales
 
 ---
 
-## Slice 2: 3 Paneles Core
+## Slice 2: Export Validation
 
-- [x] **F3-05** — Panel "Rotación por Categoría": SQL contra `mv_rotacion_mensual`, display=bar
-- [x] **F3-06** — Panel "Stock Actual vs Mínimo": SQL contra `mv_stock_actual`, display=table
-- [x] **F3-07** — Panel "Top 10 Productos por Ventas": SQL contra `mv_top_productos`, display=row
-- [x] **F3-08** — Queries validadas con EXPLAIN ANALYZE <2s. Documentado en `sql/queries_dashboard.sql`
+- [ ] **F4-04** — `scripts/validate_dashboard_exports.py`: descarga CSV + PNG de cada card via Metabase API, valida magic bytes + CSV parseable
+- [ ] **F4-05** — `docs/METABASE_EXPORTS.md`: documenta endpoints, parámetros, troubleshooting
 
-## Checkpoint 2: 3 Paneles Core Visibles ✅
+## Checkpoint 2: Export Validado ✅
 
-- [x] Dashboard accesible en `http://localhost:3000`
-- [x] 3+ cards visibles (Rotación, Stock, Top 10, Alertas)
-- [x] Cada card carga sin errores
-- [x] Queries usan `mv_*` (materialized views)
+- [ ] 4/4 cards exportan a CSV con datos válidos
+- [ ] 4/4 cards exportan a PNG con magic bytes correctos
+- [ ] `docs/METABASE_EXPORTS.md` completo y revisado
+- [ ] Roundtrip `make metabase-export && make test` exit 0
 
 ---
 
-## Slice 3: Panel Alertas + Metabase Pulses
+## Slice 3: Resilience Validation
 
-- [x] **F3-09** — Panel "Alertas de Stock Mínimo": SQL contra productos+proveedores, display=table
-- [x] **F3-10** — 2 Metabase Pulses: "Alerta Stock Crítico" (09:00) + "Resumen Ventas" (18:00)
-- [x] **F3-11** — JSON colección exportado con pulses
-- [x] **F3-12** — `docs/METABASE_SETUP.md`: Setup Rápido, Re-configuración, Troubleshooting
+- [ ] **F4-06** — `scripts/test_persistence.sh`: ejecuta `make destroy && make setup && make metabase-setup && make test` (destructivo, opt-in)
+- [ ] **F4-07** — `scripts/test_error_handling.py`: con PG caído, Metabase retorna error 500/503 con mensaje claro (no opaco)
 
-## Checkpoint 3: 4 Paneles + Alertas Activas ✅
+## Checkpoint 3: Resilience Validado ✅
 
-- [x] 4 paneles visibles: Rotación, Stock, Top 10, Alertas
-- [x] 2 Pulses configurados en Metabase Notifications
-- [x] JSON colección completo con pulses
-- [x] `docs/METABASE_SETUP.md` completo
+- [ ] Roundtrip `make destroy && make setup && make metabase-setup && make test` exit 0
+- [ ] Con PostgreSQL caído, Metabase retorna error 500/503 con mensaje útil
+- [ ] Tras `docker start metabase-postgres`, Metabase se reconecta sin intervención manual
+- [ ] Roundtrip completo tarda <10 min
 
 ---
 
-## Slice 4: Test Suite F3
+## Slice 4: Test Suite F4
 
-- [x] **F3-13** — `tests/test_f3.py` con **25 tests estáticos**: AST parse, file existence, JSON validity
-- [x] **F3-14** — **11 tests runtime**: /api/health, setup --db-only, --questions, --dashboard, --full, idempotencia, collection export, JSON content, MV refresh
+- [ ] **F4-08** — `tests/test_f4.py`: tests estáticos (file existence, AST) + runtime (`@pytest.mark.runtime`: export integrity, roundtrip opt-in)
 
-## Checkpoint 4: F3 Complete ✅ (Ready para F4)
+## Checkpoint 4: F4 Complete ✅ (Ready para F5)
 
-- [x] `make test` muestra F0 (72) + F1 (68) + F2 (102) + F3 (38) = **280 tests passing**
-- [x] `make metabase-setup` es idempotente (re-ejecutable sin duplicar)
-- [x] Code review multi-eje (Tezcatlipoca): 24 observaciones resueltas (2 críticas, 9 importantes, 11 sugerencias)
-- [x] 4 commits atómicos + 3 commits de revisión/simplificación para F3
-- [x] Working tree limpio
+- [ ] `make test` muestra F0 (72) + F1 (68) + F2 (102) + F3 (38) + F4 (≥15) = **≥295 tests passing**
+- [ ] FTR de F4 pasa checklist de `docs/WORKFLOW.md` §5
+- [ ] Roundtrip `make destroy && make setup && make metabase-setup && make test` exit 0
+- [ ] `git log --oneline` muestra 4-5 commits atómicos para F4
+- [ ] Working tree limpio
 
 ---
 
 ## Progreso
 
-- **Total tareas:** 14
-- **Tareas completadas:** 14/14
-- **Checkpoints pasados:** 4/4
-- **Tiempo real:** ~1 día (con fixes de API Metabase)
-- **Tests finales:** 72 (F0) + 68 (F1) + 102 (F2) + 38 (F3) = **280 tests**
-- **Commits:** 4 atómicos para F3 + 3 commits post-revisión (simplificación + fixes Tezcatlipoca)
-- **Dashboard:** http://localhost:3000 — 4 paneles funcionales + 2 Pulses
+- **Total tareas:** 8
+- **Tareas completadas:** 0/8
+- **Checkpoints pasados:** 0/4
+- **Tiempo estimado:** ~3.5 horas
+- **Commits esperados:** 4-5 atómicos
+- **Tests objetivo:** 280 (F0-F3) + ≥15 (F4) = ≥295
