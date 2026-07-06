@@ -47,7 +47,25 @@ DB_CONFIG = {
     "password": os.getenv("POSTGRES_PASSWORD", "change-me-in-production"),
 }
 
-# Default volumes (adjus ted by --scale)
+# Constants
+FECHA_INICIO = datetime(2026, 1, 1)
+FECHA_FIN = datetime(2026, 12, 31, 23, 59, 59)
+DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves",
+               "Viernes", "Sábado", "Domingo"]
+MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+MOTIVOS_DEVOLUCION = [
+    "Producto defectuoso", "No corresponde a la descripción",
+    "Talla incorrecta", "Producto equivocado",
+    "Ya no lo necesita", "Llegó dañado",
+    "Insatisfecho con la calidad", "Cambio de opinión",
+    "No compatible", "Retraso en la entrega",
+]
+ESTADOS_LOGISTICA = ["Enviado", "En tránsito", "Entregado", "Pendiente"]
+METODOS_ENVIO = ["DHL", "FedEx", "Estafeta", "Correos de México",
+                 "UPS", "RedPack"]
+
+# Default volumes (adjusted by --scale)
 DEFAULT_VOLUMES = {
     "categorias": 20,
     "proveedores": 50,
@@ -103,6 +121,11 @@ class DataGenerator:
         if self.debug:
             logging.info(msg)
 
+    def _fetch_ids(self, table: str, column: str = "id") -> list:
+        """Fetch all IDs from a table for FK references."""
+        self.cur.execute(f"SELECT {column} FROM {table}")
+        return [row[0] if len(row) == 1 else row for row in self.cur.fetchall()]
+
     # ─── Dimension Seeders ──────────────────────────────────
 
     def _seed_categorias(self) -> None:
@@ -141,11 +164,8 @@ class DataGenerator:
         Uses weighted random to simulate 70% sales on 30% products.
         Products reference existing categorias and proveedores.
         """
-        # Fetch existing FK references
-        self.cur.execute("SELECT id FROM categorias")
-        categoria_ids = [row[0] for row in self.cur.fetchall()]
-        self.cur.execute("SELECT id FROM proveedores")
-        proveedor_ids = [row[0] for row in self.cur.fetchall()]
+        categoria_ids = self._fetch_ids("categorias")
+        proveedor_ids = self._fetch_ids("proveedores")
 
         self.cur.execute("BEGIN")
         for _ in range(self.num["productos"]):
@@ -203,10 +223,6 @@ class DataGenerator:
         """Insert 365 days (2026 full year) with computed attributes."""
         self.cur.execute("BEGIN")
         d = date(2026, 1, 1)
-        dias = ["Lunes", "Martes", "Miércoles", "Jueves",
-                "Viernes", "Sábado", "Domingo"]
-        meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-                 "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
         for _ in range(self.num["tiempo"]):
             mes_idx = d.month - 1
             trim = f"Q{(mes_idx // 3) + 1}"
@@ -216,8 +232,8 @@ class DataGenerator:
                    ON CONFLICT (fecha) DO NOTHING""",
                 (
                     d,
-                    dias[d.weekday()],
-                    meses[mes_idx],
+                    DIAS_SEMANA[d.weekday()],
+                    MESES[mes_idx],
                     str(d.year),
                     trim,
                 )
@@ -228,8 +244,7 @@ class DataGenerator:
 
     def _seed_promociones(self) -> None:
         """Insert 30 promotions with date ranges."""
-        self.cur.execute("SELECT id FROM categorias")
-        categoria_ids = [row[0] for row in self.cur.fetchall()]
+        categoria_ids = self._fetch_ids("categorias")
 
         self.cur.execute("BEGIN")
         for _ in range(self.num["promociones"]):
@@ -258,16 +273,15 @@ class DataGenerator:
         """Insert 100K sales with Pareto distribution.
 
         70% of sales concentrate on 30% of products (Pareto principle).
-        precio_unitario is fetched from productos at insert time.
+        Pre-fetches all prices to avoid N+1 queries.
         """
-        self.cur.execute("SELECT id FROM productos")
-        producto_ids = [row[0] for row in self.cur.fetchall()]
-        self.cur.execute("SELECT id FROM clientes")
-        cliente_ids = [row[0] for row in self.cur.fetchall()]
-        self.cur.execute("SELECT id FROM tiempo")
-        tiempo_ids = [row[0] for row in self.cur.fetchall()]
-        self.cur.execute("SELECT id FROM promociones")
-        promo_ids = [row[0] for row in self.cur.fetchall()]
+        producto_ids = self._fetch_ids("productos")
+        cliente_ids = self._fetch_ids("clientes")
+        tiempo_ids = self._fetch_ids("tiempo")
+        promo_ids = self._fetch_ids("promociones")
+        # Pre-load prices to avoid N+1 per sale
+        self.cur.execute("SELECT id, precio FROM productos")
+        precios = {row[0]: row[1] for row in self.cur.fetchall()}
 
         # Pareto weighting: top 30% of products get 70% probability
         pareto_idx = max(1, int(len(producto_ids) * 0.3))
@@ -282,22 +296,15 @@ class DataGenerator:
             cliente_id = random.choice(cliente_ids)
             tiempo_id = random.choice(tiempo_ids)
 
-            # Fetch product's precio for this sale
-            self.cur.execute(
-                "SELECT precio FROM productos WHERE id = %s", (producto_id,)
-            )
-            precio = self.cur.fetchone()[0]
-
+            precio = precios[producto_id]
             cantidad = random.randint(1, 5)
             total = round(cantidad * precio, 2)
 
             # 30% of sales have a promo
             promocion_id = random.choice([None] * 7 + promo_ids) if promo_ids else None
 
-            # Generate a timestamp within 2026
             fecha_venta = self.fake.date_time_between(
-                start_date=datetime(2026, 1, 1),
-                end_date=datetime(2026, 12, 31, 23, 59, 59)
+                start_date=FECHA_INICIO, end_date=FECHA_FIN
             )
 
             self.cur.execute(
@@ -317,12 +324,9 @@ class DataGenerator:
 
     def _seed_inventario(self) -> None:
         """Insert 50K inventory records: daily snapshots per product."""
-        self.cur.execute("SELECT id, stock_actual FROM productos")
-        productos = self.cur.fetchall()
-        self.cur.execute("SELECT id FROM tiempo")
-        tiempo_ids = [row[0] for row in self.cur.fetchall()]
-        self.cur.execute("SELECT id FROM proveedores")
-        proveedor_ids = [row[0] for row in self.cur.fetchall()]
+        productos = self._fetch_ids("productos", "id, stock_actual")
+        tiempo_ids = self._fetch_ids("tiempo")
+        proveedor_ids = self._fetch_ids("proveedores")
 
         # Target ~10 records per product (50K for 5K products)
         snaps_per_product = max(1, self.num["inventario"] // len(productos))
@@ -350,8 +354,7 @@ class DataGenerator:
                         stock_final,
                         random.choice(proveedor_ids),
                         self.fake.date_time_between(
-                            start_date=datetime(2026, 1, 1),
-                            end_date=datetime(2026, 12, 31, 23, 59, 59)
+                            start_date=FECHA_INICIO, end_date=FECHA_FIN
                         ),
                     )
                 )
@@ -361,35 +364,23 @@ class DataGenerator:
         self._log(f"✓ inventario: {batch_count} registros")
 
     def _seed_devoluciones(self) -> None:
-        """Insert 5K returns (5% of ventas)."""
-        self.cur.execute("SELECT id, fecha_venta FROM ventas")
-        ventas = self.cur.fetchall()
-        self.cur.execute("SELECT id FROM tiempo")
-        tiempo_ids = [row[0] for row in self.cur.fetchall()]
-        self.cur.execute("SELECT id FROM clientes")
-        cliente_ids = [row[0] for row in self.cur.fetchall()]
+        """Insert 5K returns (5% of ventas). Pre-fetches venta data to avoid N+1."""
+        ventas = self._fetch_ids("ventas", "id, fecha_venta")
+        tiempo_ids = self._fetch_ids("tiempo")
+        cliente_ids = self._fetch_ids("clientes")
+        # Pre-load venta product/client data to avoid N+1
+        self.cur.execute("SELECT id, producto_id, cliente_id FROM ventas")
+        venta_map = {row[0]: (row[1], row[2]) for row in self.cur.fetchall()}
 
         num_devoluciones = min(self.num["devoluciones"], len(ventas))
         selected_ventas = random.sample(ventas, num_devoluciones)
-        motivos = [
-            "Producto defectuoso", "No corresponde a la descripción",
-            "Talla incorrecta", "Producto equivocado",
-            "Ya no lo necesita", "Llegó dañado",
-            "Insatisfecho con la calidad", "Cambio de opinión",
-            "No compatible", "Retraso en la entrega",
-        ]
 
         self.cur.execute("BEGIN")
         for venta_id, fecha_venta in selected_ventas:
-            # Fetch producto_id and cliente_id from the venta
-            self.cur.execute(
-                "SELECT producto_id, cliente_id FROM ventas WHERE id = %s",
-                (venta_id,)
-            )
-            row = self.cur.fetchone()
-            if not row:
+            data = venta_map.get(venta_id)
+            if not data:
                 continue
-            producto_id, cliente_id = row
+            producto_id, cliente_id = data
 
             self.cur.execute(
                 """INSERT INTO devoluciones
@@ -402,7 +393,7 @@ class DataGenerator:
                     cliente_id,
                     random.choice(tiempo_ids),
                     random.randint(1, 3),
-                    random.choice(motivos),
+                    random.choice(MOTIVOS_DEVOLUCION),
                     fecha_venta + timedelta(days=random.randint(1, 30)),
                 )
             )
@@ -411,18 +402,12 @@ class DataGenerator:
 
     def _seed_logistica(self) -> None:
         """Insert 20K shipping records (20% of ventas)."""
-        self.cur.execute("SELECT id, fecha_venta FROM ventas")
-        ventas = self.cur.fetchall()
-        self.cur.execute("SELECT id FROM tiempo")
-        tiempo_ids = [row[0] for row in self.cur.fetchall()]
-        self.cur.execute("SELECT id FROM proveedores")
-        proveedor_ids = [row[0] for row in self.cur.fetchall()]
+        ventas = self._fetch_ids("ventas", "id, fecha_venta")
+        tiempo_ids = self._fetch_ids("tiempo")
+        proveedor_ids = self._fetch_ids("proveedores")
 
         num_logistica = min(self.num["logistica"], len(ventas))
         selected_ventas = random.sample(ventas, num_logistica)
-        estados = ["Enviado", "En tránsito", "Entregado", "Pendiente"]
-        metodos = ["DHL", "FedEx", "Estafeta", "Correos de México",
-                   "UPS", "RedPack"]
 
         self.cur.execute("BEGIN")
         for venta_id, fecha_venta in selected_ventas:
@@ -436,8 +421,8 @@ class DataGenerator:
                     venta_id,
                     random.choice(proveedor_ids),
                     random.choice(tiempo_ids),
-                    random.choice(estados),
-                    random.choice(metodos),
+                    random.choice(ESTADOS_LOGISTICA),
+                    random.choice(METODOS_ENVIO),
                     fecha_venta + timedelta(days=dias_entrega)
                     if random.random() > 0.3 else None,
                 )
