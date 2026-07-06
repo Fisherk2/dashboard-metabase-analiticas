@@ -1,6 +1,6 @@
 # Plan de Ejecución — F2: Núcleo
 
-**Fecha:** 2026-07-03 | **Autor:** Fisherk2 | **Fase:** F2 (📋 LISTO PARA EJECUTAR)
+**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Fase:** F2 (✅ COMPLETADO)
 **Metodología:** Slicing vertical con checkpoints de calidad (patrón F1)
 **Reemplaza:** F1 plan (preservado en git history, commit `f218f99`+)
 **Alcance confirmado:** Schema estrella + datos + índices + MVs + particionamiento + test suite
@@ -369,9 +369,9 @@ make db-reset && make data-generate && make mv-refresh && make test
 ## 10. Estado Actual y Siguiente Fase
 
 **F1: Infraestructura** — ✅ COMPLETADO (10 tasks, 145 tests, 5 commits atómicos)
-**F2: Núcleo** — 📋 PLAN APROBADO — Listo para ejecutar (18 tasks, 6 slices, 12h estimadas)
+**F2: Núcleo** — ✅ COMPLETADO (20 tasks, 6 slices, 8 commits, +40 tests)
 
-**F3: Interfaces** — Próxima fase después de F2. Alcance:
+**F3: Interfaces** — 📋 LISTO PARA PLANIFICAR. Alcance:
 - Conectar Metabase a PostgreSQL (admin user, JDBC)
 - 3+ paneles: Rotación por Categoría, Stock vs Mínimo, Top 10 Productos
 - Validar queries con EXPLAIN ANALYZE <2s

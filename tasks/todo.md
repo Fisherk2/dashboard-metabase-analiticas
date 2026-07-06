@@ -110,8 +110,8 @@
 ## Progreso
 
 - **Total tareas:** 20
-- **Tareas completadas:** 0/20
-- **Checkpoints pasados:** 0/6
+- **Tareas completadas:** 20/20
+- **Checkpoints pasados:** 6/6
 - **Tiempo estimado:** ~12h (1.5 días)
 - **Tests objetivo:** 72 (F0) + 67 (F1) + ≥40 (F2) = **≥179 tests**
 - **Commits objetivo:** 6-8 atómicos

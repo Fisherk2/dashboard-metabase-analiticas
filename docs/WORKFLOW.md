@@ -11,8 +11,8 @@
 | ----------------------- | ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
 | **F0: Preparación**     | ✅ COMPLETADO      | Configurar entorno base, convenciones y documentación inicial.  | Estructura de carpetas, `.gitignore`, `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `Makefile`, `tests/test_f0.py` (72 tests). | 1 día         |
 | **F1: Infraestructura** | ✅ COMPLETADO      | Levantar servicios de PostgreSQL y Metabase con Docker.         | `docker-compose.yml`, credenciales seguras, conexión funcional, persistencia, tests/test_f1.py (67 tests).     | 1 día         |
-| **F2: Núcleo**          | 📋 LISTO PARA PLANIFICAR | Implementar schema estrella, generar datos y optimizar queries. | Script `generate_data.py`, schema SQL, índices, vistas materializadas, particionamiento.         | 2 días        |
-| **F3: Interfaces**      | ⏳ PENDIENTE       | Configurar paneles en Metabase y validar queries.               | 3+ paneles en Metabase (rotación, stock, ventas), queries optimizadas.                           | 1 día         |
+| **F2: Núcleo**          | ✅ COMPLETADO      | Implementar schema estrella, generar datos y optimizar queries. | `init.sql` (10 tablas), `generate_data.py` (155K registros), 9+ índices, 3 MVs, particionamiento, `tests/test_f2.py` (+40 tests). | ~2 días       |
+| **F3: Interfaces**      | 📋 LISTO PARA PLANIFICAR | Configurar paneles en Metabase y validar queries.               | 3+ paneles en Metabase (rotación, stock, ventas), queries optimizadas.                           | 1 día         |
 | **F4: Pruebas**         | ⏳ PENDIENTE       | Validar rendimiento, exportación y flujos completos.            | Resultados de `EXPLAIN ANALYZE`, pruebas de exportación, validación de paneles.                  | 1 día         |
 | **F5: Despliegue**      | ⏳ PENDIENTE       | Documentar el proyecto y preparar para portafolio.              | `README.md` final con badges, guías de usuario, capturas de pantalla.                            | 1 día         |
 | **F6: Cierre**          | ⏳ PENDIENTE       | Revisión final y lecciones aprendidas.                          | Retrospectiva documentada, actualización de `AGENTS.md` y `WORKFLOW.md`.                         | 0.5 días      |
@@ -72,18 +72,18 @@
 ### Fase 2: Núcleo
 
 **Objetivo:** Implementar el schema estrella, generar datos sintéticos y optimizar queries.
-**Estado:** 📋 LISTO PARA PLANIFICAR (dependencias F0 + F1 cumplidas)
+**Estado:** ✅ COMPLETADO
 
 
-| **ID** | **Tarea**                                                                        | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                                            |
-| ------ | -------------------------------------------------------------------------------- | --------------- | -------------- | --------------------------------------------------------------------------------------- |
-| F2-01  | Crear script `init.sql` con el schema estrella (tablas de hechos y dimensiones). | Fisherk2     | 2 horas        | Script ejecuta sin errores en PostgreSQL.                                               |
-| F2-02  | Ejecutar `init.sql` en PostgreSQL para crear el schema.                          | Fisherk2     | 0.5 horas      | Tablas creadas y validadas con `SELECT * FROM information_schema.tables;`.              |
-| F2-03  | Desarrollar script `generate_data.py` para generar datos sintéticos.             | Fisherk2     | 3 horas        | Script genera 50K–200K registros por tabla de hechos y 1K–10K por tabla de dimensiones. |
-| F2-04  | Ejecutar `generate_data.py` para poblar la base de datos.                        | Fisherk2     | 1 hora         | Datos insertados y validados con `SELECT COUNT(*) FROM tabla;`.                         |
-| F2-05  | Crear índices en columnas críticas (ej: `producto_id`, `fecha_id`).              | Fisherk2     | 1 hora         | Índices creados y validados con `SELECT * FROM pg_indexes;`.                            |
-| F2-06  | Crear vistas materializadas para KPIs críticos (rotación, stock, ventas).        | Fisherk2     | 1 hora         | Vistas creadas y actualizadas con `REFRESH MATERIALIZED VIEW`.                          |
-| F2-07  | Particionar tabla `ventas` por rango de fechas (opcional).                       | Fisherk2     | 1 hora         | Tabla `ventas` particionada y validada con `SELECT * FROM pg_partitions;`.              |
+| **ID** | **Tarea**                                                                        | **Estado**    | **DoD (Definition of Done)**                                                            |
+| ------ | -------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------- |
+| F2-01  | Crear script `init.sql` con el schema estrella (tablas de hechos y dimensiones). | ✅ Completado | `init.sql` define 6 dimension tables con SERIAL PK, UNIQUE, CHECK, NOT NULL, COMMENT ON TABLE. |
+| F2-02  | Ejecutar `init.sql` en PostgreSQL para crear el schema.                          | ✅ Completado | `init.sql` define 4 fact tables con explicit FKs, CHECK constraints, B-tree indexes.    |
+| F2-03  | Desarrollar script `generate_data.py` para generar datos sintéticos.             | ✅ Completado | `generate_data.py` con `DataGenerator` class, argparse `--debug`/`--scale`/`--reset`, 10 seeders, transactions. |
+| F2-04  | Ejecutar `generate_data.py` para poblar la base de datos.                        | ✅ Completado | Data generated: 20+50+5000+2000+365+30+100000+50000+5000+20000 = 155,535 records, Pareto distributions. |
+| F2-05  | Crear índices en columnas críticas (ej: `producto_id`, `fecha_id`).              | ✅ Completado | `create_indexes.sql` with 9+ B-tree indexes, `IF NOT EXISTS` idempotency; `queries_baseline.sql` with `EXPLAIN ANALYZE`. |
+| F2-06  | Crear vistas materializadas para KPIs críticos (rotación, stock, ventas).        | ✅ Completado | 3 MVs: `mv_rotacion_mensual`, `mv_stock_actual`, `mv_top_productos`; `refresh_materialized_views.sql`; queries <2s. |
+| F2-07  | Particionar tabla `ventas` por rango de fechas.                                  | ✅ Completado | `ventas` partitioned by `RANGE (fecha_venta)` into 12 monthly partitions; partition pruning active. |
 
 
 **Dependencias:**
@@ -95,6 +95,7 @@
 ### Fase 3: Interfaces
 
 **Objetivo:** Configurar paneles en Metabase y validar queries.
+**Estado:** 📋 LISTO PARA PLANIFICAR (dependencias F0+F1+F2 cumplidas)
 
 
 | **ID** | **Tarea**                                                           | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                                      |
@@ -262,7 +263,7 @@ graph TD
 | ----------------------- | ------------------------------------- | ------------------ | ----------------- | ------------- |
 | **F0: Preparación**     | Estructura de carpetas y `AGENTS.md`. | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F1: Infraestructura** | `docker-compose.yml` y `.env`.        | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
-| **F2: Núcleo**          | Schema, datos, índices, vistas.       | Ver detalle abajo. | Fisherk2          | Pendiente     |
+| **F2: Núcleo**          | Schema, datos, índices, vistas.       | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F3: Interfaces**      | Paneles en Metabase.                  | Ver detalle abajo. | Fisherk2          | Pendiente     |
 | **F4: Pruebas**         | Resultados de pruebas.                | Ver detalle abajo. | Fisherk2          | Pendiente     |
 | **F5: Despliegue**      | `README.md` y documentación final.    | Ver detalle abajo. | Fisherk2          | Pendiente     |
@@ -345,7 +346,7 @@ gantt
     section Fases
     F0: Preparación          :done, a1, 2026-07-02, 1d
     F1: Infraestructura     :done, a2, after a1, 1d
-    F2: Núcleo              :a3, after a2, 2d
+    F2: Núcleo              :done, a3, after a2, 2d
     F3: Interfaces          :a4, after a3, 1d
     F4: Pruebas             :a5, after a4, 1d
     F5: Despliegue          :a6, after a5, 1d
@@ -363,7 +364,8 @@ gantt
 | **Hito**                   | **Fecha Estimada** | **Criterio**                                                    |
 | -------------------------- | ------------------ | --------------------------------------------------------------- |
 | **Plan F2 listo**          | 2026-07-03         | Plan de F2 aprobado, dependencias F0+F1 verificadas.           |
-| **MVP Listo para Pruebas** | 2026-07-06         | Fases F0, F1, F2, F3 completadas.                              |
+| **F2 completado**          | 2026-07-06         | F2 Núcleo completado: schema + datos + índices + MVs + partición. |
+| **MVP Listo para Pruebas** | 2026-07-07         | Fases F0, F1, F2, F3 completadas.                              |
 | **MVP Validado**           | 2026-07-07         | Fases F4 completadas, todas las queries <2s.                   |
 | **Proyecto Completado**    | 2026-07-08         | Fases F5 y F6 completadas, documentación finalizada.           |
 
@@ -377,6 +379,7 @@ gantt
 | ----------- | ---------- | --------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0         | 2026-07-02 | Fisherk2  | Versión inicial del `WORKFLOW.md`. | Priorizar tareas críticas (F0, F1, F2, F3) para garantizar el MVP; Usar vistas materializadas para queries frecuentes mejora el rendimiento significativamente; Docker Compose simplifica la orquestación de servicios. |
 | 1.1         | 2026-07-03 | Fisherk2  | F0+F1 marcados como completados; F2 listo para planificar. | Vertical slicing reduce checkpoints con misma calidad; tests de runtime con marker permiten CI local sin Docker; named volumes eliminan problemas de permisos de bind mount. |
+| 1.2         | 2026-07-06 | Fisherk2  | F2 marcado como completado; F3 listo para planificar. | Generadores Python con distribución Pareto mejoran realismo de datos sintéticos; DROP+RECREATE para particionar funciona en entorno sintético pero requiere CASCADE + refrescar MVs; test_f2.py con estáticos + runtime mantiene calidad sin Docker en CI. |
 
 
 ---
