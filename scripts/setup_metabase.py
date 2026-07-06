@@ -34,7 +34,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 COLLECTION_DIR = PROJECT_ROOT / "metabase" / "collections"
 COLLECTION_JSON = COLLECTION_DIR / "dashboard_ecommerce.json"
 
-# Question definitions: (name, sql, display_type)
+# Question definitions: (name, sql, display_type, template_tags)
 QUESTIONS = [
     {
         "name": "Rotación por Categoría",
@@ -42,11 +42,11 @@ QUESTIONS = [
             "SELECT categoria, mes, anio, ventas_totales, ingresos_totales, "
             "productos_vendidos "
             "FROM mv_rotacion_mensual "
-            "WHERE anio = {{anio}} AND mes = {{mes}} "
-            "ORDER BY ventas_totales DESC"
+            "ORDER BY anio, mes, ventas_totales DESC"
         ),
         "display": "bar",
         "description": "Ventas e ingresos por categoría de producto a lo largo del tiempo.",
+        "template_tags": {},
     },
     {
         "name": "Stock Actual vs Mínimo",
@@ -59,6 +59,7 @@ QUESTIONS = [
         ),
         "display": "table",
         "description": "Alertas de stock mínimo y estado de inventario por producto.",
+        "template_tags": {},
     },
     {
         "name": "Top 10 Productos por Ventas",
@@ -71,6 +72,7 @@ QUESTIONS = [
         ),
         "display": "row",
         "description": "Los 10 productos con mayores ingresos del período.",
+        "template_tags": {},
     },
     {
         "name": "Alertas de Stock Mínimo",
@@ -79,11 +81,12 @@ QUESTIONS = [
             "pr.nombre AS proveedor, pr.email AS contacto_proveedor "
             "FROM productos p "
             "JOIN proveedores pr ON p.proveedor_id = pr.id "
-            "WHERE p.stock_actual <= p.stock_minimo * {{umbral_multiplier}} "
+            "WHERE p.stock_actual <= p.stock_minimo "
             "ORDER BY p.stock_actual ASC"
         ),
         "display": "table",
-        "description": "Productos con stock por debajo del umbral configurable.",
+        "description": "Productos con stock por debajo del mínimo.",
+        "template_tags": {},
     },
 ]
 
@@ -366,28 +369,43 @@ class MetabaseSetup:
             )
         return dbs[0]["id"]
 
-    def create_question(
+    def _get_question_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return a question dict by name, or None if not found."""
+        questions = self._get_questions()
+        for q in questions:
+            if q.get("name") == name:
+                return q
+        return None
+
+    def _build_question_payload(
         self,
         name: str,
         sql: str,
         display: str = "table",
         description: str = "",
+        template_tags: dict[str, Any] | None = None,
+        database_id: int | None = None,
     ) -> dict[str, Any]:
-        """Create a saved SQL question.
+        """Build the API payload for creating/updating a question card.
 
-        If a question with the same name already exists, skips creation
-        (idempotent).
-
-        POST /api/card with dataset_query containing the native SQL.
-        Returns the card resource dict.
+        Parameters array must be provided alongside template_tags so that
+        each {{variable}} in the SQL gets a proper parameter entry with
+        a non-blank string id. Without this, Metabase auto-generates
+        invalid parameters that cause:
+          {:parameters [{:id ["should be a string" "non-blank string"]}]}
         """
-        if self._question_name_exists(name):
-            log.info("Question '%s' already exists — skipping (idempotent)", name)
-            questions = self._get_questions()
-            return next(q for q in questions if q.get("name") == name)
+        params: list[dict[str, Any]] = []
+        if template_tags:
+            for tag_name, tag_def in template_tags.items():
+                params.append({
+                    "id": tag_name,
+                    "name": tag_def.get("display_name", tag_name),
+                    "type": tag_def.get("type", "text"),
+                    "default": tag_def.get("default"),
+                    "sectionId": "",
+                })
 
-        db_id = self._get_first_database_id()
-        payload = {
+        payload: dict[str, Any] = {
             "name": name,
             "description": description,
             "display": display,
@@ -395,13 +413,69 @@ class MetabaseSetup:
                 "type": "native",
                 "native": {
                     "query": sql,
-                    "template_tags": {},
+                    "template_tags": template_tags or {},
                 },
-                "database": db_id,
             },
+            "parameters": params,
             "visualization_settings": {},
             "collection_position": None,
         }
+        if database_id is not None:
+            payload["dataset_query"]["database"] = database_id
+        return payload
+
+    def create_question(
+        self,
+        name: str,
+        sql: str,
+        display: str = "table",
+        description: str = "",
+        template_tags: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Create or update a saved SQL question.
+
+        If a question with the same name already exists, updates it via
+        PUT /api/card/:id (idempotent). Otherwise creates via POST /api/card.
+
+        template_tags must include an entry for each {{variable}} in the SQL
+        so Metabase can properly substitute them at query time.
+
+        Returns the card resource dict.
+        """
+        existing = self._get_question_by_name(name)
+        if existing:
+            card_id = existing["id"]
+            log.info(
+                "Question '%s' already exists (id=%s) — updating",
+                name, card_id,
+            )
+            payload = self._build_question_payload(
+                name=name, sql=sql, display=display,
+                description=description, template_tags=template_tags,
+            )
+            # PUT requires database field in dataset_query
+            db_id = self._get_first_database_id()
+            payload["dataset_query"]["database"] = db_id
+            response = requests.put(
+                f"{self.base_url}/api/card/{card_id}",
+                headers=self._headers,
+                json=payload,
+                timeout=15,
+            )
+            if response.status_code != 200:
+                raise MetabaseApiError(
+                    f"PUT /api/card/{card_id}", response.status_code, response.text
+                )
+            updated = response.json()
+            log.info("Question '%s' updated (id=%s)", name, updated.get("id"))
+            return updated
+
+        db_id = self._get_first_database_id()
+        payload = self._build_question_payload(
+            name=name, sql=sql, display=display,
+            description=description, template_tags=template_tags,
+            database_id=db_id,
+        )
         response = requests.post(
             f"{self.base_url}/api/card",
             headers=self._headers,
@@ -428,6 +502,7 @@ class MetabaseSetup:
                 sql=q_def["sql"],
                 display=q_def["display"],
                 description=q_def.get("description", ""),
+                template_tags=q_def.get("template_tags", {}),
             )
             cards.append(card)
         log.info("Total questions: %d", len(cards))
