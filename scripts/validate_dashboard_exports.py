@@ -72,6 +72,30 @@ def _get_cards(config: dict, token: str) -> list[dict[str, Any]]:
 
 # ─── Validar exportaciones ──────────────────────────────────
 
+def _fetch_export(
+    config: dict,
+    token: str,
+    card_id: int,
+    fmt: str,
+) -> tuple:  # (response, None) or (None, (row_count, error_msg))
+    """Fetch an export from Metabase API.
+
+    Returns a (response, None) tuple on success, or
+    (None, (0, error_message)) on failure.
+    """
+    headers = {"X-Metabase-Session": token}
+    url = f"{config['url']}/api/card/{card_id}/query/{fmt}"
+    try:
+        resp = requests.get(url, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            return (None, (0, f"HTTP {resp.status_code}"))
+        return (resp, None)
+    except requests.Timeout:
+        return (None, (0, "TIMEOUT"))
+    except Exception as exc:
+        return (None, (0, f"ERROR: {exc}"))
+
+
 def _validate_csv_export(
     config: dict,
     token: str,
@@ -83,39 +107,28 @@ def _validate_csv_export(
     Returns:
         (row_count, status_message)
     """
-    headers = {"X-Metabase-Session": token}
-    url = f"{config['url']}/api/card/{card_id}/query/csv"
+    resp, error = _fetch_export(config, token, card_id, "csv")
+    if error:
+        return error
 
-    try:
-        resp = requests.get(url, headers=headers, timeout=30)
-        if resp.status_code != 200:
-            return (0, f"HTTP {resp.status_code}")
+    # Try parsing as CSV
+    text = resp.text
+    # Strip any BOM
+    if text.startswith("\ufeff"):
+        text = text[1:]
 
-        content_type = resp.headers.get("Content-Type", "")
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    row_count = len(rows)
 
-        # Try parsing as CSV
-        text = resp.text
-        # Strip any BOM
-        if text.startswith("\ufeff"):
-            text = text[1:]
+    if row_count == 0:
+        return (0, "EMPTY (0 rows)")
 
-        reader = csv.DictReader(io.StringIO(text))
-        rows = list(reader)
-        row_count = len(rows)
+    # Validate we can read at least one column
+    if not reader.fieldnames or len(reader.fieldnames) == 0:
+        return (0, "NO COLUMNS")
 
-        if row_count == 0:
-            return (0, "EMPTY (0 rows)")
-
-        # Validate we can read at least one column
-        if not reader.fieldnames or len(reader.fieldnames) == 0:
-            return (0, "NO COLUMNS")
-
-        return (row_count, f"OK ({row_count} rows, {len(reader.fieldnames)} cols)")
-
-    except requests.Timeout:
-        return (0, "TIMEOUT")
-    except Exception as exc:
-        return (0, f"ERROR: {exc}")
+    return (row_count, f"OK ({row_count} rows, {len(reader.fieldnames)} cols)")
 
 
 def _validate_xlsx_export(
@@ -129,31 +142,22 @@ def _validate_xlsx_export(
     Returns:
         (byte_size, status_message)
     """
-    headers = {"X-Metabase-Session": token}
-    url = f"{config['url']}/api/card/{card_id}/query/xlsx"
+    resp, error = _fetch_export(config, token, card_id, "xlsx")
+    if error:
+        return error
 
-    try:
-        resp = requests.get(url, headers=headers, timeout=30)
-        if resp.status_code != 200:
-            return (0, f"HTTP {resp.status_code}")
+    content = resp.content
+    size_kb = len(content) / 1024
 
-        content = resp.content
-        size_kb = len(content) / 1024
+    if len(content) < 100:
+        return (0, f"TOO SMALL ({size_kb:.1f} KB)")
 
-        if len(content) < 100:
-            return (0, f"TOO SMALL ({size_kb:.1f} KB)")
+    # Validate it looks like an XLSX (PK zip header)
+    is_xlsx = content[:2] == b"PK"
+    if not is_xlsx:
+        return (0, f"BAD FORMAT (no PK header, {size_kb:.1f} KB)")
 
-        # Validate it looks like an XLSX (PK zip header)
-        is_xlsx = content[:2] == b"PK"
-        if not is_xlsx:
-            return (0, f"BAD FORMAT (no PK header, {size_kb:.1f} KB)")
-
-        return (int(len(content)), f"OK ({size_kb:.1f} KB)")
-
-    except requests.Timeout:
-        return (0, "TIMEOUT")
-    except Exception as exc:
-        return (0, f"ERROR: {exc}")
+    return (int(len(content)), f"OK ({size_kb:.1f} KB)")
 
 
 # ─── Reporte ────────────────────────────────────────────────

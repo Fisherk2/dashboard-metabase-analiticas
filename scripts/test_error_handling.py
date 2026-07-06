@@ -84,6 +84,33 @@ def get_token() -> str:
     return resp.json()["id"]
 
 
+# ─── Response Validation Helpers ────────────────────────────
+
+TRACE_INDICATORS = [
+    "Traceback (most recent call last)",
+    "NullPointerException",
+    "SQLException",
+    "java.lang.",
+    "File \"",
+    "at org.",
+]
+
+MEANINGFUL_INDICATORS = [
+    "error", "Error", "unable", "Unable", "connect", "Connect",
+    "database", "Database", "not available", "timeout",
+]
+
+
+def _has_stack_trace(body: str) -> bool:
+    """Check if response body contains a raw stack trace."""
+    return any(indicator in body for indicator in TRACE_INDICATORS)
+
+
+def _has_meaningful_message(body: str) -> bool:
+    """Check if response body contains a user-friendly error message."""
+    return any(indicator in body for indicator in MEANINGFUL_INDICATORS)
+
+
 # ─── Tests ──────────────────────────────────────────────────
 
 def test_metabase_health_ok() -> bool:
@@ -143,29 +170,15 @@ def test_metabase_error_on_pg_down() -> bool:
     if status not in (500, 502, 503):
         log_info(f"Metabase returned HTTP {status} (acceptable error code)")
 
-    # Check: response should NOT contain raw stack traces or Python/Clojure errors
-    trace_indicators = [
-        "Traceback (most recent call last)",
-        "NullPointerException",
-        "SQLException",
-        "java.lang.",
-        "File \"",
-        "at org.",
-    ]
-    for indicator in trace_indicators:
-        if indicator in body:
-            log_error(f"Response contains raw trace: '{indicator}'")
-            log_error(f"Body snippet: {body[:300]}")
-            return False
+    # Check: response should NOT contain raw stack traces
+    if _has_stack_trace(body):
+        log_error("Response contains raw stack trace")
+        log_error(f"Body snippet: {body[:300]}")
+        return False
 
     # Check: response should contain a meaningful error message
-    meaningful_indicators = [
-        "error", "Error", "unable", "Unable", "connect", "Connect",
-        "database", "Database", "not available", "timeout",
-    ]
-    has_message = any(indicator in body for indicator in meaningful_indicators)
+    has_message = _has_meaningful_message(body)
     if not has_message:
-        log_warn = print  # Use print for non-critical warnings
         print(f"  WARN: Response may lack user-friendly message (status={status})")
         print(f"  Body: {body[:200]}")
 
