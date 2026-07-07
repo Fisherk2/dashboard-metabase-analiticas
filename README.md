@@ -17,7 +17,7 @@ Panel visual conectado a **PostgreSQL** que muestra KPIs de inventario, rotació
 | **Vistas Materializadas** | 3 vistas pre-agregadas para queries sub-2s (rotación, stock, top productos) |
 | **Particionamiento** | Tabla `ventas` particionada por mes (12 particiones, pruning activo) |
 | **Alertas de Stock** | 2 Metabase Pulses: stock crítico (09:00) + resumen ventas (18:00) |
-| **Datos Sintéticos** | ~155K registros con distribución Pareto para simular comportamiento real |
+| **Datos Sintéticos** | ~182K registros con distribución Pareto para simular comportamiento real |
 | **Exportación** | Dashboards exportables a CSV, XLSX, PNG y JSON |
 | **Reproducible** | `make setup` → todo funcionando desde cero |
 
@@ -37,7 +37,7 @@ Los dashboards están disponibles en `http://localhost:3000` después de ejecuta
 ```mermaid
 graph TD
     subgraph Generacion["Generación de Datos"]
-        A[Python + Faker] -->|155K registros| B
+        A[Python + Faker] -->|182K registros| B
     end
 
     subgraph Infra["Infraestructura Docker"]
@@ -74,7 +74,7 @@ graph TD
 | **Base de datos** | PostgreSQL 15+ | Schema estrella, vistas materializadas, particionamiento |
 | **BI / Visualización** | Metabase OSS | Dashboards, queries ad-hoc, exportación PNG/CSV/JSON |
 | **Orquestación** | Docker Compose | Servicios reproducibles PostgreSQL + Metabase |
-| **Generación de datos** | Python + Faker | Datos sintéticos realistas (155K registros, Pareto) |
+| **Generación de datos** | Python + Faker | Datos sintéticos realistas (182K registros, Pareto) |
 | **Automatización** | GNU Make | Interfaz unificada (`make up`, `make db-init`, `make data-generate`) |
 
 ## Quick Start
@@ -87,7 +87,7 @@ cp .env.example .env
 make setup
 ```
 
-Esto levanta PostgreSQL 15+ y Metabase, crea el schema estrella, genera ~155K registros sintéticos, refresca vistas materializadas, y deja los servicios listos para explorar en `http://localhost:3000`.
+Esto levanta PostgreSQL 15+ y Metabase, crea el schema estrella, genera ~182K registros sintéticos, crea y refresca vistas materializadas, y deja los servicios listos para explorar en `http://localhost:3000`.
 
 ## Instalación Detallada
 
@@ -123,8 +123,9 @@ make test            # Run static tests (no Docker required)
 ```bash
 make deps            # Install Python dependencies
 make up              # Start PostgreSQL + Metabase
-make db-init         # Create schema (tables, indexes, MVs, partitions)
+make db-init         # Create schema (tables + indexes)
 make data-generate   # Generate synthetic data
+make create-views    # Create materialized views
 make mv-refresh      # Refresh materialized views
 ```
 
