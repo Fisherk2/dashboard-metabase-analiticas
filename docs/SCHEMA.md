@@ -168,7 +168,7 @@ erDiagram
 | tiempo      | fecha          | DATE         | UNIQUE                      | Sí (B-tree) | NO           | Fecha del registro.              |
 | tiempo      | dia_semana     | VARCHAR(10)  | -                           | No          | NO           | Día de la semana (ej: "Lunes").  |
 | tiempo      | mes            | VARCHAR(10)  | -                           | No          | NO           | Mes (ej: "Enero").               |
-| tiempo      | anio           | VARCHAR(4)   | -                           | No          | NO           | Año (ej: "2026").                |
+| tiempo      | anio           | INT          | -                            | No          | NO           | Año (ej: 2026).                  |
 | tiempo      | trimestre      | VARCHAR(10)  | -                           | No          | NO           | Trimestre (ej: "Q1").            |
 | promociones | id             | SERIAL       | PRIMARY KEY                 | Sí (B-tree) | NO           | Identificador único.             |
 | promociones | nombre         | VARCHAR(100) | -                           | Sí (B-tree) | NO           | Nombre de la promoción.          |
@@ -194,7 +194,6 @@ erDiagram
 | productos    | categoria_id        | INT           | FOREIGN KEY (categorias.id)  | Sí (B-tree) | NO           | Categoría del producto.                        |
 | productos    | proveedor_id        | INT           | FOREIGN KEY (proveedores.id) | Sí (B-tree) | NO           | Proveedor del producto.                        |
 | productos    | fecha_creacion      | TIMESTAMP     | -                            | No          | NO           | Fecha de creación del producto.                |
-| productos    | fecha_actualizacion | TIMESTAMP     | -                            | No          | SÍ           | Fecha de última actualización.                 |
 | ventas       | id                  | SERIAL        | PRIMARY KEY                  | Sí (B-tree) | NO           | Identificador único.                           |
 | ventas       | producto_id         | INT           | FOREIGN KEY (productos.id)   | Sí (B-tree) | NO           | Producto vendido.                              |
 | ventas       | cliente_id          | INT           | FOREIGN KEY (clientes.id)    | Sí (B-tree) | NO           | Cliente que realizó la compra.                 |
@@ -350,6 +349,17 @@ erDiagram
 | **Máscara de Datos/PII** | No aplica (datos sintéticos).                                            |
 | **Auditoría**            | Logs de PostgreSQL para consultas lentas o errores.                      |
 | **Gestión de Secretos**  | Credenciales de PostgreSQL en variables de entorno (no hardcodeadas).    |
+
+### ⚠️ Integridad Referencial y Particionamiento
+
+La tabla `ventas` está particionada por rango de fechas (`PARTITION BY RANGE (fecha_venta)`).
+Debido a limitaciones de PostgreSQL, las FOREIGN KEYs desde `devoluciones.venta_id` y
+`logistica.venta_id` hacia `ventas.id` **no se recrean** después del particionamiento.
+
+**Mitigación actual:** La integridad referencial se garantiza a nivel de aplicación mediante
+`generate_data.py`, que inserta datos siguiendo el orden de FKs. Para entornos de
+producción, implementar triggers de validación o migrar a `pg_partman`.
+Ver TD-002 en [TECH_DEBT.md](TECH_DEBT.md).
 
 
 ---

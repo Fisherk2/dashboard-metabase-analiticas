@@ -1,0 +1,99 @@
+# docker-compose.yml — Dashboard Metabase + Colección Analítica
+# Orquestación de PostgreSQL 15+ y Metabase OSS
+# Documentación completa: specs/spec-infrastructure.md
+# =============================================================================
+
+services:
+  # ─── PostgreSQL 15+ (Analytical Database) ─────────────────────────────────
+  postgres:
+    image: postgres:15
+    container_name: metabase-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ecommerce_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  # ─── Metabase OSS (BI Visualization) ──────────────────────────────────────
+  metabase:
+    image: metabase/metabase:v0.62.3
+    container_name: metabase-app
+    ports:
+      - "${METABASE_PORT}:3000"
+    environment:
+      MB_DB_TYPE: ${MB_DB_TYPE}
+      MB_DB_DBNAME: ${MB_DB_DBNAME}
+      MB_DB_PORT: ${MB_DB_PORT}
+      MB_DB_USER: ${MB_DB_USER}
+      MB_DB_PASS: ${MB_DB_PASS}
+      MB_DB_HOST: ${MB_DB_HOST}
+      MB_ENCRYPTION_SECRET_KEYS: ${MB_ENCRYPTION_SECRET_KEYS}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    volumes:
+      - mb_data:/metabase-data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ecommerce_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  # ─── Data Generator (Python) ────────────────────────────────────────────────
+  data-generator:
+    image: python:3.11-slim
+    container_name: metabase-generator
+    working_dir: /scripts
+    volumes:
+      - type: bind
+        source: ../scripts
+        target: /scripts
+        read_only: true
+    environment:
+      MB_DB_HOST: postgres
+      MB_DB_PORT: 5432
+      MB_DB_DBNAME: ${MB_DB_DBNAME}
+      MB_DB_USER: ${MB_DB_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ["tail", "-f", "/dev/null"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ecommerce_net
+    restart: unless-stopped
+
+# ─── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  pg_data:
+    driver: local
+  mb_data:
+    driver: local
+
+# ─── Networks ────────────────────────────────────────────────────────────────
+networks:
+  ecommerce_net:
+    driver: bridge
+    internal: false  # Allows Metabase port mapping to host
