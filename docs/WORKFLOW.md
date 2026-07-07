@@ -1,6 +1,6 @@
 # Workflow – Dashboard Metabase + Colección Analítica para E-commerce v1.0
 
-**Fecha:** 2026-07-06 | **Autor:** Fisherk2 | **Metodología:** Iterativo
+**Fecha:** 2026-07-07 | **Autor:** Fisherk2 | **Metodología:** Iterativo
 
 ---
 
@@ -14,8 +14,8 @@
 | **F2: Núcleo**          | ✅ COMPLETADO      | Implementar schema estrella, generar datos y optimizar queries. | `init.sql` (10 tablas), `generate_data.py` (182K registros), 9+ índices, 3 MVs, particionamiento, `tests/test_f2.py` (+40 tests). | ~2 días       |
 | **F3: Interfaces**      | ✅ COMPLETADO      | Configurar paneles en Metabase y validar queries.               | `scripts/setup_metabase.py`, 4 paneles (Rotación, Stock, Top 10, Alertas), 2 Metabase Pulses, `docs/METABASE_SETUP.md`, `tests/test_f3.py` (36 tests). | 1 día         |
 | **F4: Pruebas**         | ✅ COMPLETADO      | Validar rendimiento, exportación y flujos completos.            | `measure_query_performance.py`, `validate_dashboard_exports.py`, `test_error_handling.py`, `test_persistence.sh`, `queries_performance.sql`, `METABASE_EXPORTS.md`, `tests/test_f4.py` (39 tests). | 1 día         |
-| **F5: Despliegue**      | 📋 LISTO PARA PLANIFICAR | Documentar el proyecto y preparar para portafolio.              | `README.md` final con badges, guías de usuario, capturas de pantalla.                            | 1 día         |
-| **F6: Cierre**          | ⏳ PENDIENTE       | Revisión final y lecciones aprendidas.                          | Retrospectiva documentada, actualización de `AGENTS.md` y `WORKFLOW.md`.                         | 0.5 días      |
+| **F5: Despliegue**      | ✅ COMPLETADO      | Documentar el proyecto y preparar para portafolio.              | `README.md` (280 líneas, 17 secciones), `docs/USER_GUIDE.md` (297 líneas), `docs/TECHNICAL_GUIDE.md` (444 líneas), `docs/REPRODUCIBILITY.md`, Makefile + test fix. | 1 día         |
+| **F6: Cierre**          | 📋 LISTO PARA PLANIFICAR | Revisión final y lecciones aprendidas.                          | Retrospectiva documentada, actualización de `AGENTS.md` y `WORKFLOW.md`.                         | 0.5 días      |
 
 
 ---
@@ -141,21 +141,16 @@
 ### Fase 5: Despliegue
 
 **Objetivo:** Documentar el proyecto y preparar para portafolio.
-**Estado:** 📋 LISTO PARA PLANIFICAR
+**Estado:** ✅ COMPLETADO
 
 
-| **ID** | **Tarea**                                                | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                             |
-| ------ | -------------------------------------------------------- | --------------- | -------------- | ------------------------------------------------------------------------ |
-| F5-01  | Actualizar `README.md` (ver detalle abajo).              | Fisherk2        | 2 horas        | `README.md` completo y revisado.                                         |
-| F5-02  | Crear guía de usuario en `/docs/USER_GUIDE.md`.          | Fisherk2        | 1 hora         | Guía incluye: cómo usar Metabase, interpretar paneles, y exportar datos. |
-| F5-03  | Crear guía técnica en `/docs/TECHNICAL_GUIDE.md`.        | Fisherk2        | 1 hora         | Guía incluye: arquitectura, schema, queries, y optimizaciones.           |
-| F5-04  | Grabar video tutorial (opcional).                        | Fisherk2        | 1 hora         | Video de 5–10 min mostrando el flujo completo.                           |
-| F5-05  | Validar que el proyecto es reproducible en otro entorno. | Fisherk2        | 1 hora         | Proyecto funciona en al menos 2 entornos locales diferentes.             |
-
-**Detalle F5-01 — Actualizar `README.md` con:**
-- Pasos para levantar el proyecto.
-- Capturas de pantalla de los paneles.
-- Badges de tecnologías.
+| **ID** | **Tarea**                                                | **Estado**      | **DoD (Definition of Done)**                                                                               |
+| ------ | -------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| F5-01  | Actualizar `README.md` (ver detalle abajo).              | ✅ Completado   | `README.md` expandido de 79 → 280 líneas con 17 secciones, Mermaid, tabla de features, performance, security. |
+| F5-02  | Crear guía de usuario en `/docs/USER_GUIDE.md`.          | ✅ Completado   | `docs/USER_GUIDE.md` (297 líneas): 4 paneles interpretados, troubleshooting, FAQ, exportación API.         |
+| F5-03  | Crear guía técnica en `/docs/TECHNICAL_GUIDE.md`.        | ✅ Completado   | `docs/TECHNICAL_GUIDE.md` (444 líneas): 11 secciones, arquitectura, star schema, MVs, queries, lessons learned. |
+| F5-04  | Grabar video tutorial (opcional).                        | ❌ Descartado   | Decisión del usuario: sin video, solo documentación escrita.                                                |
+| F5-05  | Validar que el proyecto es reproducible en otro entorno. | ✅ Completado   | Clonado a `/tmp/f5-repro-test/`, `make setup` EXIT 0, `make test` 304/318 pass, `make test-queries` ALL PASS. |
 
 **Dependencias:**
 
@@ -166,6 +161,7 @@
 ### Fase 6: Cierre
 
 **Objetivo:** Revisión final y documentación de lecciones aprendidas.
+**Estado:** 📋 LISTO PARA PLANIFICAR
 
 
 | **ID** | **Tarea**                                                                      | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                |
@@ -273,7 +269,7 @@ graph TD
 | **F2: Núcleo**          | Schema, datos, índices, vistas.       | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F3: Interfaces**      | Paneles en Metabase.                  | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F4: Pruebas**         | Resultados de pruebas.                | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
-| **F5: Despliegue**      | `README.md` y documentación final.    | Ver detalle abajo. | Fisherk2          | Pendiente     |
+| **F5: Despliegue**      | `README.md` y documentación final.    | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 
 **Checklist por Gate:**
 
@@ -357,8 +353,8 @@ gantt
     F2: Núcleo              :done, a3, after a2, 2d
     F3: Interfaces          :done, a4, after a3, 1d
     F4: Pruebas             :done, a5, after a4, 1d
-    F5: Despliegue          :active, a6, after a5, 1d
-    F6: Cierre              :a7, after a6, 0.5d
+    F5: Despliegue          :done, a6, after a5, 1d
+    F6: Cierre              :active, a7, after a6, 0.5d
     
     section Hitos
     F3 Interfaces Completado :milestone1, after a4, 0d
@@ -376,7 +372,8 @@ gantt
 | **F3 Interfaces Completado**| 2026-07-06         | F3 Interfaces completado: setup_metabase.py, 4 paneles, 2 Pulses, code review. |
 | **F4 Pruebas Completado**  | 2026-07-06         | F4 Pruebas completado: performance validation, exports, error handling, code review. |
 | **MVP Validado**           | 2026-07-06         | Fases F0-F4 completadas, todas las queries <2s, exportación válida, manejo de errores probado. |
-| **Proyecto Completado**    | 2026-07-08         | Fases F5 y F6 completadas, documentación finalizada.           |
+| **F5 Despliegue Completado** | 2026-07-07      | F5 completado: README premium, USER_GUIDE, TECHNICAL_GUIDE, REPRODUCIBILITY, code review + fixes. |
+| **Proyecto Completado**    | 2026-07-08         | F6 Cierre completado, documentación finalizada, lecciones aprendidas documentadas. |
 
 
 ---
@@ -391,6 +388,7 @@ gantt
 | 1.2         | 2026-07-06 | Fisherk2  | F2 marcado como completado; F3 listo para planificar. | Generadores Python con distribución Pareto mejoran realismo de datos sintéticos; DROP+RECREATE para particionar funciona en entorno sintético pero requiere CASCADE + refrescar MVs; test_f2.py con estáticos + runtime mantiene calidad sin Docker en CI. |
 | 1.3         | 2026-07-06 | Fisherk2  | F3 Interfaces completado; F4 listo para planificar. | REST API de Metabase para setup programático es viable pero requiere manejar edge cases (setup token, parámetros de dashboard, pulsos); source-driven development evitó asumir endpoints incorrectos; code review multi-eje descubrió 24 observaciones incluyendo 2 críticas. |
 | 1.4         | 2026-07-06 | Fisherk2  | F4 Pruebas completado; F5 listo para planificar. | Medir rendimiento requiere ejecutar scripts **dentro** del contenedor (no desde el host) porque PostgreSQL no expone puertos; las MVs con nombres de mes en español deben filtrarse por nombre ('Marzo' no '03'); `make test-queries` ahora usa `$(GENERATOR)`. |
+| 1.5         | 2026-07-07 | Fisherk2  | F5 completado; F6 listo para planificar. | Documentar para portafolio requiere contenido autocontenido sin capturas de pantalla (solo texto + Mermaid); el proceso de code review multi-eje en docs descubre inconsistencias de datos (155K vs 182K) que estaban propagadas desde un error aritmético en WORKFLOW.md; `make setup` debe incluir `create-views` para ser verdaderamente reproducible. |
 
 
 ---
