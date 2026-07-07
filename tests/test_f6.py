@@ -268,6 +268,45 @@ class TestTechnicalDebt:
             "Tech debt debe tener ratings de riesgo"
 
 
+class TestLessonsLearned:
+    """F6-03: LESSONS_LEARNED.md creado con lecciones de todas las fases."""
+
+    def test_lessons_learned_exists(self, root: Path):
+        assert (root / "docs" / "LESSONS_LEARNED.md").exists()
+
+    def test_lessons_learned_minimum_lines(self, root: Path):
+        lines = (root / "docs" / "LESSONS_LEARNED.md").read_text().splitlines()
+        assert len(lines) >= 200, \
+            f"LESSONS_LEARNED.md tiene {len(lines)} líneas, esperado >= 200"
+
+    def test_lessons_covers_all_phases(self, root: Path):
+        content = (root / "docs" / "LESSONS_LEARNED.md").read_text()
+        for phase in ["F0", "F1", "F2", "F3", "F4", "F5"]:
+            assert phase in content, f"Lessons debe cubrir {phase}"
+
+    def test_lessons_has_cross_phase_patterns(self, root: Path):
+        content = (root / "docs" / "LESSONS_LEARNED.md").read_text()
+        assert "Cross-Phase" in content or "cross-phase" in content.lower(), \
+            "Lessons debe tener sección Cross-Phase Patterns"
+
+    def test_lessons_format_problema_solucion(self, root: Path):
+        content = (root / "docs" / "LESSONS_LEARNED.md").read_text()
+        assert "Problema" in content, "Cada lección debe mencionar 'Problema'"
+        assert "Solución" in content, "Cada lección debe mencionar 'Solución'"
+        assert "Lección" in content, "Cada lección debe mencionar 'Lección'"
+
+    def test_lessons_has_problem_solution_lesson_count(self, root: Path):
+        """Al menos 15 lecciones en formato Problema→Solución→Lección."""
+        content = (root / "docs" / "LESSONS_LEARNED.md").read_text()
+        lesson_count = content.count("**Lección")
+        assert lesson_count >= 15, \
+            f"Debe haber >=15 lecciones, encontradas {lesson_count}"
+
+    def test_lessons_dated_header(self, root: Path):
+        content = (root / "docs" / "LESSONS_LEARNED.md").read_text()
+        assert "2026-07-07" in content, "Lessons debe tener fecha"
+
+
 class TestFileLineCounts:
     """Document line counts for checkpoint record."""
 
