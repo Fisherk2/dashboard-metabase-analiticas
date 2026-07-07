@@ -87,7 +87,13 @@ data-count: ## Contar registros por tabla
 	done
 
 # ─── SQL Optimization ────────────────────────────────────────
-.PHONY: mv-refresh indexes-check
+.PHONY: create-views mv-refresh indexes-check
+
+create-views: ## Crear vistas materializadas desde sql/views/*.sql
+	@for f in sql/views/*.sql; do \
+		echo "  Running: $$f"; \
+		$(PSQL) < $$f; \
+	done
 
 mv-refresh: ## Refrescar vistas materializadas
 	@test -f scripts/refresh_materialized_views.sql || { echo "Error: scripts/refresh_materialized_views.sql not found"; exit 1; }
@@ -129,7 +135,7 @@ test-full: test-queries test-integrity ## Ejecutar todas las validaciones
 # ─── Utilities ───────────────────────────────────────────────
 .PHONY: setup clean
 
-setup: up deps db-init data-generate ## 🚀 Setup completo del proyecto (up → deps → db-init → data-generate)
+setup: up deps db-init data-generate create-views mv-refresh ## 🚀 Setup completo del proyecto (up → deps → db-init → data-generate → MVs)
 
 clean: ## Limpiar archivos temporales
 	@echo "Limpiando __pycache__, *.pyc, *.pyo, .pytest_cache..."
