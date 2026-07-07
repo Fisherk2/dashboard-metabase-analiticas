@@ -7,21 +7,7 @@
 [![GNU Make](https://img.shields.io/badge/Make-4.0+-A81D33?logo=gnu&logoColor=white)](https://www.gnu.org/software/make/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Panel visual conectado a **PostgreSQL** que muestra KPIs de inventario, rotación y alertas de stock mínimo para un e-commerce simulado. Proyecto de portafolio que demuestra diseño de **schema estrella para OLAP**, optimización de **queries SQL**, integración con **Metabase** como herramienta BI, y generación de **datos sintéticos** con Python + Faker.
-
-**Para quién es este proyecto:** Desarrolladores backend, analistas de datos y estudiantes que quieran demostrar habilidades en modelado dimensional, optimización de PostgreSQL, visualización de datos con Metabase, y automatización con Docker + Make.
-
-## What You'll Learn (Skills Demostradas)
-
-| Skill | Implementación en el Proyecto |
-|-------|------------------------------|
-| **Star Schema / Modelado Dimensional** | 4 tablas de hechos + 5 dimensiones con FKs explícitas, diseñadas para OLAP |
-| **Optimización SQL (PostgreSQL)** | Vistas materializadas, particionamiento por rango, 9+ índices B-tree, `EXPLAIN ANALYZE` <2s |
-| **BI con Metabase** | 4 dashboards funcionales, 2 Pulses de alerta, exportación CSV/XLSX/PNG/JSON |
-| **Docker Compose / Infraestructura** | PostgreSQL + Metabase orquestados, healthchecks, persistencia, red aislada |
-| **Python + Faker (ETL)** | Pipeline de datos sintéticos con distribución Pareto, 155K registros, transacciones ACID |
-| **Automatización con Make** | 25+ targets unificados: `make setup` → entorno completo desde cero |
-| **Testing & Calidad** | 313+ tests estáticos + runtime, validación de rendimiento (p95 <2s), persistencia roundtrip |
+Panel visual conectado a **PostgreSQL** que muestra KPIs de inventario, rotación y alertas de stock mínimo para un e-commerce simulado. Proyecto que demuestra diseño de **schema estrella para OLAP**, optimización de **queries SQL**, integración con **Metabase** como herramienta BI, y generación de **datos sintéticos** con Python + Faker.
 
 ## Features
 
