@@ -21,7 +21,7 @@ SELECT
     ingresos_totales,
     productos_vendidos
 FROM mv_rotacion_mensual
-WHERE anio = '2026'
+WHERE anio = 2026
   AND mes = '03'
 ORDER BY ventas_totales DESC;
 
@@ -114,11 +114,11 @@ ORDER BY p.stock_actual ASC;
 -- JOIN productos p ON v.producto_id = p.id
 -- JOIN categorias c ON p.categoria_id = c.id
 -- JOIN tiempo t ON v.fecha_id = t.id
--- WHERE t.anio = '2026' AND t.mes = '03'
+-- WHERE t.anio = 2026 AND t.mes = '03'
 -- GROUP BY c.nombre, t.mes, t.anio;
 -- Tiempo sin MV: ~200ms (con índices) a ~1.5s (sin índices)
 -- Tiempo con MV: <50ms
 
 -- Con MV (query optimizada):
--- SELECT * FROM mv_rotacion_mensual WHERE anio = '2026' AND mes = '03';
+-- SELECT * FROM mv_rotacion_mensual WHERE anio = 2026 AND mes = '03';
 -- Tiempo: <50ms — mejora de 4x-30x vs tablas base

@@ -129,7 +129,7 @@ Dashboard analítico conectado a **PostgreSQL** para visualizar **KPIs de invent
 | **Métrica**                       | **Resultado**                                        |
 | --------------------------------- | ---------------------------------------------------- |
 | Registros generados               | ~182K totales (100K ventas, 50K inventario, etc.)   |
-| Tiempo de carga (p95)             | <2.1ms (4 queries, 10 ejecuciones cada una)         |
+| Tiempo de carga (p95)             | <2.1ms (target: <2s; 4 queries, 10 ejecuciones cada una)         |
 | Paneles en Metabase               | 4 (Rotación, Stock, Top 10, Alertas)                |
 | Metabase Pulses                   | 2 (Stock Crítico + Resumen Ventas)                  |
 | Reproducibilidad                  | ✅ Verificada (make setup exit 0 en entorno limpio) |

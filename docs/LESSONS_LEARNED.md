@@ -91,7 +91,7 @@
 
 **Problema:** Las queries de agregación (rotación mensual, stock actual, top productos) recalculaban los mismos resultados cada vez, consumiendo recursos innecesarios.
 
-**Solución:** Crear 3 vistas materializadas (`mv_rotacion_mensual`, `mv_stock_actual`, `mv_top_productos`) con refresco manual via `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
+**Solución:** Crear 3 vistas materializadas (`mv_rotacion_mensual`, `mv_stock_actual`, `mv_top_productos`) con refresco manual via `REFRESH MATERIALIZED VIEW`.
 
 **Lección:** Las vistas materializadas son el equivalente funcional de una capa de caching en base de datos. Para dashboards con datos que cambian diariamente (no en tiempo real), son la solución óptima.
 
@@ -175,7 +175,7 @@
 
 **Problema:** El WORKFLOW.md reportaba "155K registros" debido a un error aritmético al sumar los registros de cada tabla. Este error se propagó a README.md, USER_GUIDE.md y TECHNICAL_GUIDE.md.
 
-**Solución:** Corregir el cálculo a 182,465 registros totales (100K ventas + 50K inventario + 5K devoluciones + 2K productos + 365 tiempo + 30 categorías + 20K logística + 5K promociones + 50 proveedores + 20 clientes). Actualizar los 4 documentos afectados.
+**Solución:** Corregir el cálculo a 182,465 registros totales (100K ventas + 50K inventario + 5K devoluciones + 2K productos + 365 tiempo + 30 categorías + 20K logística + 5K promociones + 50 proveedores + 2,000 clientes). Actualizar los 4 documentos afectados.
 
 **Lección:** Los números en documentación técnica deben verificarse con `SELECT COUNT(*)` en la base de datos, no calcularse a mano. Un error aritmético simple se propaga a través de todo el proyecto si no se valida contra la fuente de verdad.
 

@@ -46,7 +46,7 @@ JOIN productos p ON v.producto_id = p.id
 JOIN categorias c ON p.categoria_id = c.id
 JOIN proveedores pr ON p.proveedor_id = pr.id
 JOIN tiempo t ON v.fecha_id = t.id
-WHERE t.anio = '2026'
+WHERE t.anio = 2026
 GROUP BY c.nombre;
 ```
 

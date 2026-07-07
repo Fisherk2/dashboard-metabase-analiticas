@@ -77,13 +77,16 @@ CREATE INDEX IF NOT EXISTS idx_ventas_fecha_venta
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ventas_id_unique
     ON ventas (id);
 
--- 8. Nota: FKs de devoluciones y logistica a ventas NO se recrean
+-- 8. Partición default para fechas fuera de rango
+CREATE TABLE IF NOT EXISTS ventas_default PARTITION OF ventas DEFAULT;
+
+-- 10. Nota: FKs de devoluciones y logistica a ventas NO se recrean
 -- porque PostgreSQL no permite índices UNIQUE en (id) solo para tablas
 -- particionadas. La integridad se garantiza via generate_data.py.
 -- Ver ADR-005 en specs/adr/adr-005-partitioning-fks.md
 
--- 9. Limpiar backup
+-- 11. Limpiar backup
 DROP TABLE IF EXISTS ventas_backup;
 
--- 10. Vaciar y analizar
+-- 12. Vaciar y analizar
 VACUUM ANALYZE ventas;

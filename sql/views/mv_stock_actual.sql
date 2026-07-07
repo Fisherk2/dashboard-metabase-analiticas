@@ -17,7 +17,7 @@ SELECT
     pr.nombre AS proveedor,
     CASE
         WHEN p.stock_actual <= p.stock_minimo THEN 'ALERTA'
-        WHEN p.stock_actual <= p.stock_minimo * 1.2 THEN 'PRECAUCION'
+        WHEN p.stock_actual <= p.stock_minimo * 1.1 THEN 'PRECAUCION'
         ELSE 'OK'
     END AS estado
 FROM productos p

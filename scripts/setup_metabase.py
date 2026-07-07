@@ -884,12 +884,16 @@ class MetabaseSetup:
             "export": None,
         }
 
-        # Step 1: Database connection
-        dbname = dbname or os.getenv("POSTGRES_DB", "ecommerce-db")
-        user = user or os.getenv("POSTGRES_USER", "ecommerce-fish")
+        # Step 1: Database connection — fail fast if env vars not set
+        dbname = dbname or os.getenv("POSTGRES_DB")
+        user = user or os.getenv("POSTGRES_USER")
         password = password or os.getenv("POSTGRES_PASSWORD")
-        if not password:
-            raise MetabaseSetupError("POSTGRES_PASSWORD not set in environment")
+        missing = [k for k, v in [("POSTGRES_DB", dbname), ("POSTGRES_USER", user), ("POSTGRES_PASSWORD", password)] if not v]
+        if missing:
+            raise MetabaseSetupError(
+                f"Missing required environment variables: {', '.join(missing)}. "
+                f"Set them in .env or export before running."
+            )
         result["database"] = self.create_database_connection(
             dbname=dbname,
             user=user,
@@ -978,17 +982,23 @@ def main():
                  args.export_only, args.full]):
         args.full = True
 
-    # Read credentials from environment (fail if unset — no hardcoded passwords)
-    mb_user = os.getenv("MB_USER", "admin@example.com")
+    # Read credentials from environment (fail fast — no hardcoded defaults)
+    mb_user = os.getenv("MB_USER")
     mb_password = os.getenv("MB_PASSWORD")
-    pg_db = os.getenv("POSTGRES_DB", "ecommerce-db")
-    pg_user = os.getenv("POSTGRES_USER", "ecommerce-fish")
+    pg_db = os.getenv("POSTGRES_DB")
+    pg_user = os.getenv("POSTGRES_USER")
     pg_password = os.getenv("POSTGRES_PASSWORD")
 
     # Validate required secrets are set (never use hardcoded passwords)
     missing = []
+    if not mb_user:
+        missing.append("MB_USER")
     if not mb_password:
         missing.append("MB_PASSWORD")
+    if not pg_db:
+        missing.append("POSTGRES_DB")
+    if not pg_user:
+        missing.append("POSTGRES_USER")
     if not pg_password:
         missing.append("POSTGRES_PASSWORD")
     if missing:

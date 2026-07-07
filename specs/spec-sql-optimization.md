@@ -194,7 +194,7 @@ SELECT matviewname FROM pg_matviews WHERE schemaname = 'public';
 EXPLAIN ANALYZE
 SELECT categoria, mes, anio, ventas_totales 
 FROM mv_rotacion_mensual 
-WHERE anio = '2026' AND mes = 'Enero'
+WHERE anio = 2026 AND mes = 'Enero'
 ORDER BY ventas_totales DESC;
 
 -- Validar particionamiento (si aplica)

@@ -30,13 +30,13 @@ SELECT
     ingresos_totales,
     productos_vendidos
 FROM mv_rotacion_mensual
-WHERE anio = '2026'
+WHERE anio = 2026
   AND mes = 'Marzo'
 ORDER BY ventas_totales DESC;
 
 -- Resultados esperados:
---   Plan: Index Scan on mv_rotacion_mensual using idx_mv_rotacion_mes_anio
---   Tiempo: <50ms
+--   Plan: Seq Scan + Sort (la MV tiene ~260 rows, seq scan es óptimo)
+--   Tiempo: <1ms
 --
 -- Resultados reales:
 --   Tiempo planificación: 0.531ms

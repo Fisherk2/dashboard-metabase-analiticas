@@ -40,8 +40,7 @@ CREATE TABLE IF NOT EXISTS productos (
     stock_minimo        INT           NOT NULL CHECK (stock_minimo >= 0),
     categoria_id        INT           NOT NULL REFERENCES categorias(id),
     proveedor_id        INT           NOT NULL REFERENCES proveedores(id),
-    fecha_creacion      TIMESTAMP     NOT NULL DEFAULT NOW(),
-    fecha_actualizacion TIMESTAMP
+    fecha_creacion      TIMESTAMP     NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE productos IS 'Catalogo de productos con stock y precios';
@@ -64,7 +63,7 @@ CREATE TABLE IF NOT EXISTS tiempo (
     fecha      DATE         NOT NULL UNIQUE,
     dia_semana VARCHAR(10)  NOT NULL,
     mes        VARCHAR(10)  NOT NULL,
-    anio       VARCHAR(4)   NOT NULL,
+    anio       INT          NOT NULL,
     trimestre  VARCHAR(10)  NOT NULL
 );
 

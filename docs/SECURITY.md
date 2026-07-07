@@ -56,6 +56,18 @@ POSTGRES_PASSWORD=mi_contraseña_segura
 - Rotar credenciales si se exponen accidentalmente.
 
 ---
+### ⚠️ Integridad Referencial y Particionamiento
+
+La tabla `ventas` está particionada por rango de fechas (`PARTITION BY RANGE (fecha_venta)`).
+Debido a limitaciones de PostgreSQL, las FOREIGN KEYs desde `devoluciones.venta_id` y
+`logistica.venta_id` hacia `ventas.id` **no se recrean** después del particionamiento.
+
+**Mitigación:** La integridad referencial se garantiza a nivel de aplicación mediante
+`generate_data.py`, que inserta datos siguiendo el orden de FKs. Para entornos de
+producción, implementar triggers de validación o migrar a `pg_partman`.
+Ver TD-002 en [TECH_DEBT.md](TECH_DEBT.md).
+
+---
 
 ## 4. Lista Explicita de Prácticas Prohibidas
 

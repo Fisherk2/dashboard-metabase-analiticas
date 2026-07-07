@@ -24,6 +24,7 @@ from datetime import date, datetime, timedelta
 import psycopg2
 from dotenv import load_dotenv
 from faker import Faker
+from psycopg2 import sql as pysql
 from psycopg2.extras import execute_values
 
 load_dotenv()
@@ -33,10 +34,10 @@ load_dotenv()
 # when running from host, use "localhost" (requires PG port exposed).
 _DB_HOST = os.getenv("MB_DB_HOST", "postgres")
 
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD") or os.getenv("MB_DB_PASS")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 if not DB_PASSWORD:
     raise ValueError(
-        "POSTGRES_PASSWORD (or MB_DB_PASS) not set. "
+        "POSTGRES_PASSWORD not set. "
         "Create a .env file from .env.example."
     )
 
@@ -55,6 +56,7 @@ DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves",
                "Viernes", "Sábado", "Domingo"]
 MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
          "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+PROMO_PROBABILITY = 0.3  # 30% de ventas tienen promoción
 MOTIVOS_DEVOLUCION = [
     "Producto defectuoso", "No corresponde a la descripción",
     "Talla incorrecta", "Producto equivocado",
@@ -150,13 +152,19 @@ class DataGenerator:
     def _fetch_ids(self, table: str) -> list:
         """Fetch all IDs from a table (single-column: id). Returns list[int]."""
         self._validate_table(table)
-        self.cur.execute(f"SELECT id FROM {table}")
+        self.cur.execute(
+            pysql.SQL("SELECT id FROM {}").format(pysql.Identifier(table))
+        )
         return [row[0] for row in self.cur.fetchall()]
 
     def _fetch_rows(self, table: str, columns: str) -> list:
         """Fetch multiple columns from a table. Returns list[tuple]."""
         self._validate_table(table)
-        self.cur.execute(f"SELECT {columns} FROM {table}")
+        self.cur.execute(
+            pysql.SQL("SELECT {} FROM {}").format(
+                pysql.SQL(columns), pysql.Identifier(table)
+            )
+        )
         return self.cur.fetchall()
 
     # ─── Dimension Seeders ──────────────────────────────────
@@ -249,7 +257,7 @@ class DataGenerator:
                 d,
                 DIAS_SEMANA[d.weekday()],
                 MESES[mes_idx],
-                str(d.year),
+                d.year,
                 trim,
             ))
             d += timedelta(days=1)
@@ -312,8 +320,12 @@ class DataGenerator:
             cantidad = random.randint(1, 5)
             total = round(cantidad * precio, 2)
 
-            # 30% of sales have a promo
-            promocion_id = random.choice([None] * 7 + promo_ids) if promo_ids else None
+            # PROMO_PROBABILITY of sales have a promo (default ~30%)
+            if promo_ids:
+                no_promo_weight = int((1 - PROMO_PROBABILITY) / PROMO_PROBABILITY * len(promo_ids))
+                promocion_id = random.choice([None] * max(1, no_promo_weight) + promo_ids)
+            else:
+                promocion_id = None
 
             fecha_venta = self.fake.date_time_between(
                 start_date=FECHA_INICIO, end_date=FECHA_FIN
@@ -437,7 +449,11 @@ class DataGenerator:
         ]
         for table in tables:
             self._validate_table(table)
-            self.cur.execute(f"TRUNCATE TABLE {table} CASCADE")
+            self.cur.execute(
+                pysql.SQL("TRUNCATE TABLE {} CASCADE").format(
+                    pysql.Identifier(table)
+                )
+            )
         self.conn.commit()
         self._log("✓ TRUNCATE CASCADE en 10 tablas")
 
@@ -467,7 +483,11 @@ class DataGenerator:
         print("\n=== RESUMEN DE DATOS GENERADOS ===")
         for table in tables:
             self._validate_table(table)
-            self.cur.execute(f"SELECT COUNT(*) FROM {table}")
+            self.cur.execute(
+                pysql.SQL("SELECT COUNT(*) FROM {}").format(
+                    pysql.Identifier(table)
+                )
+            )
             count = self.cur.fetchone()[0]
             print(f"  {table:15s}: {count:>8,} registros")
             total += count

@@ -9,6 +9,7 @@ Verifica todos los criterios de aceptación del plan F2:
 - Slice 5: Partitioning (12 particiones mensuales)
 - Security: Integridad referencial, CHECK constraints
 """
+import os
 import re
 import ast
 from pathlib import Path
@@ -18,6 +19,18 @@ import pytest
 
 # ─── Constants ────────────────────────────────────────────────
 INIT_SQL_PATH = "scripts/init.sql"
+
+# Runtime credentials (read from env with .env.example defaults for portability)
+_PG_USER = os.environ.get("POSTGRES_USER", "ecommerce")
+_PG_DB = os.environ.get("POSTGRES_DB", "ecommerce")
+
+
+def _pg_psql(cmd: str) -> str:
+    """Build a docker exec psql command with runtime credentials."""
+    return (
+        f'docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} '
+        f'-c "{cmd}" -t -A'
+    )
 
 
 def _get_table_block(content: str, table: str) -> Optional[str]:
@@ -482,7 +495,7 @@ class TestMaterializedViewsRuntime:
     @pytest.mark.runtime
     def test_mv_rotacion_exists(self, run_cmd):
         rc, stdout, _ = run_cmd(
-            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            f"docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} -c "
             "\"SELECT COUNT(*) FROM mv_rotacion_mensual\" -t -A"
         )
         assert rc == 0 and stdout.isdigit() and int(stdout) > 100, \
@@ -491,7 +504,7 @@ class TestMaterializedViewsRuntime:
     @pytest.mark.runtime
     def test_mv_stock_exists(self, run_cmd):
         rc, stdout, _ = run_cmd(
-            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            f"docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} -c "
             "\"SELECT COUNT(*) FROM mv_stock_actual\" -t -A"
         )
         assert rc == 0 and stdout.isdigit() and int(stdout) > 1000, \
@@ -500,7 +513,7 @@ class TestMaterializedViewsRuntime:
     @pytest.mark.runtime
     def test_mv_top_exists(self, run_cmd):
         rc, stdout, _ = run_cmd(
-            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            f"docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} -c "
             "\"SELECT COUNT(*) FROM mv_top_productos\" -t -A"
         )
         assert rc == 0 and stdout.isdigit() and int(stdout) > 1000, \
@@ -510,9 +523,9 @@ class TestMaterializedViewsRuntime:
     def test_mv_query_performance(self, run_cmd):
         """MV queries must complete in <2s (EXPLAIN ANALYZE)."""
         rc, stdout, stderr = run_cmd(
-            """docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            f"""docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} -c "
 EXPLAIN ANALYZE SELECT categoria, SUM(ingresos_totales)
-FROM mv_rotacion_mensual WHERE anio = '2026'
+FROM mv_rotacion_mensual WHERE anio = 2026
 GROUP BY categoria ORDER BY 2 DESC
 " -q 2>&1"""
         )
@@ -552,7 +565,7 @@ class TestPartitioningRuntime:
     @pytest.mark.runtime
     def test_ventas_is_partitioned(self, run_cmd):
         rc, stdout, _ = run_cmd(
-            "docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -c "
+            f"docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} -c "
             "\"SELECT relkind FROM pg_class WHERE relname = 'ventas'\" -t -A"
         )
         assert rc == 0 and stdout == "p", \
@@ -561,7 +574,7 @@ class TestPartitioningRuntime:
     @pytest.mark.runtime
     def test_partition_tree_has_12_children(self, run_cmd):
         rc, stdout, stderr = run_cmd(
-            """docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -t -A -c "
+            f"""docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} -t -A -c "
 SELECT count(*) FROM pg_partition_tree('ventas') WHERE isleaf = true
 " 2>&1"""
         )
@@ -573,7 +586,7 @@ SELECT count(*) FROM pg_partition_tree('ventas') WHERE isleaf = true
     def test_partition_pruning_active(self, run_cmd):
         """EXPLAIN muestra que solo se escanea una partición en query con filtro fecha."""
         rc, stdout, stderr = run_cmd(
-            """docker exec -i metabase-postgres psql -U ecommerce-fish -d ecommerce-db -q -c "
+            f"""docker exec -i metabase-postgres psql -U {_PG_USER} -d {_PG_DB} -q -c "
 EXPLAIN (COSTS OFF) SELECT count(*) FROM ventas
 WHERE fecha_venta BETWEEN '2026-03-01' AND '2026-03-31'
 " 2>&1"""

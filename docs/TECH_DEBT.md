@@ -10,7 +10,7 @@
 | Métrica | Valor |
 |---------|-------|
 | Total de ítems | 4 |
-| Críticos (P0) | 0 |
+| Críticos (P0) | 1 |
 | Altos (P1) | 1 |
 | Medios (P2) | 2 |
 | Bajos (P3) | 1 |
@@ -20,14 +20,14 @@
 
 ## 2. Deuda de Infraestructura
 
-### 2.1 Particionamiento de `ventas` requiere migración manual (TD-002)
+### 2.1 Particionamiento de `ventas` rompe FKs de `devoluciones` y `logistica` (TD-002) 🔴 P0
 
 | Campo | Detalle |
 |-------|---------|
-| **Problema** | La tabla `ventas` está particionada por rango de fechas (12 particiones mensuales), pero el particionamiento se aplicó mediante `DROP + RECREATE` con `CASCADE`. En un entorno de producción con datos reales, esto no es viable — se requiere una migración con `CREATE TABLE ... PARTITION OF` sin pérdida de datos. |
-| **Por qué está aquí** | El particionamiento se implementó en F2 con datos sintéticos, donde `DROP + RECREATE` era aceptable. Para un escenario de producción, se necesita un enfoque de migración en caliente. |
-| **Riesgo** | Medio — afecta la capacidad de escalar horizontalmente la tabla de ventas más grande (~100K registros). |
-| **Recomendación** | Implementar migración con `pg_partman` (extensión de PostgreSQL) o usar `CREATE TABLE ... PARTITION OF` con captura de datos nuevos mediante triggers durante la migración. Programar para v1.1.0. |
+| **Problema** | La tabla `ventas` está particionada por rango de fechas (12 particiones mensuales), pero el particionamiento se aplicó mediante `DROP + RECREATE` con `CASCADE`. PostgreSQL no permite que tablas externas tengan FOREIGN KEYs hacia una tabla particionada a menos que el índice UNIQUE incluya la partition key. Como resultado, las FKs de `devoluciones.venta_id → ventas.id` y `logistica.venta_id → ventas.id` **no se recrean** tras el particionamiento. La integridad referencial se garantiza solo a nivel de aplicación (via `generate_data.py`). |
+| **Por qué está aquí** | El particionamiento se implementó en F2 con datos sintéticos, donde `DROP + RECREATE` era aceptable. Para un escenario de producción, se necesita un enfoque de migración en caliente que preserve las FKs o implemente validaciones alternativas. |
+| **Riesgo** | **Crítico** — Integridad referencial rota a nivel de base de datos. Inserción manual o vía scripts externos podría crear huérfanos en `devoluciones` y `logistica`. |
+| **Recomendación** | (a) Implementar migración con `pg_partman` (extensión de PostgreSQL) o usar `CREATE TABLE ... PARTITION OF` con captura de datos nuevos mediante triggers. (b) Añadir triggers de validación en `devoluciones` y `logistica` que verifiquen existencia en `ventas`. (c) Documentar explícitamente en SECURITY.md y SCHEMA.md que la integridad se garantiza a nivel de aplicación. |
 
 ---
 
@@ -41,6 +41,7 @@
 | **Impacto** | Los tests runtime fallan si el `.env` no coincide con las credenciales hardcodeadas. En CI/CD o en un entorno nuevo, `make test` requiere ajuste manual de credenciales. |
 | **Riesgo** | Alto — bloquea la ejecución automatizada de tests runtime en entornos que no sean el del desarrollador original. |
 | **Recomendación** | Migrar todos los tests runtime a leer credenciales desde variables de entorno con fallback seguro. Centralizar la configuración de conexión en un helper compartido (`tests/helpers/db.py`). Refactorizar tests para usar fixture de conexión parametrizada. |
+| **Progreso** | Parcialmente resuelto en v1.0.0: `test_f2.py` runtime tests ahora leen `POSTGRES_USER`/`POSTGRES_DB` de variables de entorno con fallback a `.env.example`. Pendiente: extender patrón a `test_f1.py`, `test_f3.py`, `test_f4.py` y centralizar en helper compartido. |
 
 ### 3.2 Fallas pre-existentes en test suite runtime (TD-004)
 
@@ -78,8 +79,8 @@
 
 | ID | Prioridad | Esfuerzo estimado | Impacto | Asignado a |
 |----|-----------|-------------------|---------|------------|
+| TD-002 | P0 | 4h | Crítico — integridad referencial rota | Fisherk2 |
 | TD-003 | P1 | 4h | Alto — bloquea CI/CD | Fisherk2 |
-| TD-002 | P2 | 3h | Medio — escalabilidad | Fisherk2 |
 | TD-004 | P2 | 2h | Medio — confianza en tests | Fisherk2 |
 
 ---
