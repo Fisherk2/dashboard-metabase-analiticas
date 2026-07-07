@@ -175,7 +175,7 @@ class TestMakefile:
         "help", "up", "down", "restart", "logs", "status", "validate",
         "destroy", "db-shell", "db-init", "db-reset", "db-check",
         "deps", "data-generate", "data-debug", "data-count",
-        "mv-refresh", "indexes-check",
+        "mv-refresh", "indexes-check", "create-views",
         "test-queries", "test-integrity", "test-full",
         "setup", "clean",
     ])
