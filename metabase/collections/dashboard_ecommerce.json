@@ -31,7 +31,7 @@
       "collection_id": null,
       "name": "Alerta Stock Crítico",
       "is_remote_synced": null,
-      "id": 3,
+      "id": 5,
       "location": null,
       "dashboard_id": null,
       "model": "pulse"
@@ -90,7 +90,7 @@
       "collection_id": null,
       "name": "Resumen Ventas Diarias",
       "is_remote_synced": null,
-      "id": 4,
+      "id": 6,
       "location": null,
       "dashboard_id": null,
       "model": "pulse"

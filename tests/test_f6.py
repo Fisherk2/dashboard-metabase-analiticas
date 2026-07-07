@@ -307,6 +307,67 @@ class TestLessonsLearned:
         assert "2026-07-07" in content, "Lessons debe tener fecha"
 
 
+class TestGitWorkflow:
+    """F6-04: Git Workflow Release v1.0.0 — validación de estado git."""
+
+    def test_develop_branch_exists(self, run_cmd):
+        """F6-04.1: develop branch debe existir y contener F6 commits."""
+        rc, stdout, _ = run_cmd("git branch -a")
+        assert rc == 0
+        assert "develop" in stdout, "develop branch debe existir"
+
+    def test_feat_branch_has_f6_commits(self, run_cmd):
+        """feat/mvp-dashboard debe tener los 3 commits de F6."""
+        rc, stdout, _ = run_cmd(
+            "git log feat/mvp-dashboard --oneline --grep='feat(f6)'"
+        )
+        assert rc == 0
+        count = len(stdout.splitlines()) if stdout else 0
+        assert count >= 3, f"feat/mvp-dashboard debe tener >=3 commits F6, tiene {count}"
+
+    def test_develop_merged_feat(self, run_cmd):
+        """develop debe tener los commits de feat/mvp-dashboard."""
+        rc, stdout, _ = run_cmd(
+            "git log develop --oneline | head -5"
+        )
+        assert rc == 0
+        assert "feat(f6):" in stdout, \
+            "develop debe contener commits feat(f6): de F6"
+
+    def test_release_tag_exists(self, run_cmd):
+        """F6-04.4: Tag v1.0.0 debe existir."""
+        rc, stdout, _ = run_cmd("git tag -l 'v1.0.0'")
+        assert rc == 0
+        assert "v1.0.0" in stdout, "Tag v1.0.0 debe existir"
+
+    def test_main_has_release_commit(self, run_cmd):
+        """F6-04.4: main debe tener el merge commit de release."""
+        rc, stdout, _ = run_cmd("git log main --oneline -5")
+        assert rc == 0
+        assert "Release v1.0.0" in stdout or "release/v1.0.0" in stdout, \
+            "main debe tener commit de release"
+
+    def test_no_divergence_develop_main(self, run_cmd):
+        """F6-04.5: develop y main no deben divergir (sync post-release)."""
+        rc, stdout, _ = run_cmd("git log main..develop --oneline")
+        assert rc == 0
+        assert stdout == "" or len(stdout.splitlines()) <= 1, \
+            f"develop no debe divergir de main. Diferencia: {stdout[:200]}"
+
+    def test_release_branch_deleted(self, run_cmd):
+        """F6-04.6: release/v1.0.0 branch debe estar eliminada."""
+        rc, stdout, _ = run_cmd("git branch -a")
+        assert rc == 0
+        assert "release/v1.0.0" not in stdout, \
+            "release/v1.0.0 branch debe estar eliminada"
+
+    def test_git_status_clean(self, run_cmd):
+        """Working directory debe estar limpio."""
+        rc, stdout, _ = run_cmd("git status --short")
+        assert rc == 0
+        assert stdout == "", f"Working directory no está limpio:\n{stdout}"
+
+
 class TestFileLineCounts:
     """Document line counts for checkpoint record."""
 
