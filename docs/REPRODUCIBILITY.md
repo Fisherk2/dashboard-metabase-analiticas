@@ -14,7 +14,7 @@ La reproducibilidad se validó clonando el proyecto en un directorio separado y 
 | **Entorno** | Mismo host, directorio separado (`/tmp/f5-repro-test/`) |
 | **Método** | `cp -a` del repositorio (todos los archivos versionados) |
 | **Archivo de credenciales** | `.env.example` → `.env` (valores por defecto) |
-| **Comando principal** | `make setup` (deps + up + db-init + data-generate) |
+| **Comando principal** | `make setup` (deps + up + db-init + data-generate + create-views + mv-refresh) |
 | **Fecha** | 2026-07-07 |
 
 ## Resultados
@@ -27,7 +27,7 @@ La reproducibilidad se validó clonando el proyecto en un directorio separado y 
 | Levantar servicios | `make up` | ✅ Ambos containers healthy |
 | Crear schema BD | `make db-init` | ✅ 10 tablas, 19 índices |
 | Generar datos | `make data-generate` | ✅ 182,462 registros sintéticos |
-| Crear MVs | `sql/views/*.sql` | ✅ 3 MVs creadas (paso manual) |
+| Crear MVs | `make create-views` (via `make setup`) | ✅ 3 MVs creadas (automático) |
 | Refrescar MVs | `make mv-refresh` | ✅ 3 MVs refrescadas |
 
 ### Paso 2: `make test` — ✅ 304 passed, 14 failed (esperados)
@@ -59,17 +59,11 @@ No se ejecutó automáticamente porque ya se validó el flujo completo manualmen
 
 ## Issues Encontrados
 
-### Issue 1: `make setup` no crea vistas materializadas
+### Issue 1: `make setup` no crea vistas materializadas — ✅ RESUELTO
 
 **Severidad:** Media
-**Descripción:** `make setup` ejecuta `up → deps → db-init → data-generate` pero no incluye la creación de MVs desde `sql/views/*.sql`.
-**Solución manual:** Ejecutar los archivos SQL manualmente y luego `make mv-refresh`:
-```bash
-for f in sql/views/*.sql; do
-  docker exec -i metabase-postgres psql -U ecommerce -d ecommerce < "$f"
-done
-make mv-refresh
-```
+**Descripción:** `make setup` ejecutaba `up → deps → db-init → data-generate` sin incluir la creación de MVs desde `sql/views/*.sql`.
+**Solución aplicada:** Se añadió el target `create-views` en el Makefile y se incluyó en las dependencias de `setup`. Ahora `make setup` ejecuta `up → deps → db-init → data-generate → create-views → mv-refresh`.
 
 ### Issue 2: Particionamiento requiere migración manual
 
@@ -90,7 +84,6 @@ make mv-refresh
 ```bash
 cp .env.example .env
 make setup
-make mv-refresh    # necesario hasta que se corrija el Issue 1
 ```
 
 Esto deja PostgreSQL con datos sintéticos, Metabase listo para conectar, y los dashboards funcionales. Los 14 tests que fallan son pre-existentes y corresponden a configuraciones que requieren setup adicional de Metabase/particiones.
