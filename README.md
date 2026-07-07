@@ -36,39 +36,38 @@ Los dashboards están disponibles en `http://localhost:3000` después de ejecuta
 
 ## Arquitectura
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Metabase OSS                      │
-│  Dashboards ← Preguntas SQL ← Conexión JDBC ──────┐│
-└─────────────────────────────────────────────────────┘
-                                                      │
-                                                      ▼
-┌─────────────────────────────────────────────────────┐
-│                   PostgreSQL 15+                     │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────┐ │
-│  │   Ventas    │  │  Inventario  │  │ Devoluciones│ │
-│  │ (part.)     │  │              │  │            │ │
-│  └──────┬──────┘  └──────┬───────┘  └──────┬─────┘ │
-│         │                │                 │        │
-│         └────────────────┼─────────────────┘        │
-│                    ┌─────▼──────┐                    │
-│                    │  mv_*      │                    │
-│                    │  (MVs)     │                    │
-│                    └─────┬──────┘                    │
-│                          │                           │
-│  ┌───────────────────────────────────────────┐       │
-│  │ Dimensiones: productos, clientes, tiempo, │       │
-│  │  categorías, sucursales                  │       │
-│  └───────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────┘
-                                                      ▲
-┌─────────────────────────────────────────────────────┐
-│              Python + Faker                          │
-│  generate_data.py → 155K records → PostgreSQL        │
-└─────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Generacion["Generación de Datos"]
+        A[Python + Faker] -->|155K registros| B
+    end
+
+    subgraph Infra["Infraestructura Docker"]
+        C[Docker Compose]
+    end
+
+    subgraph PG["PostgreSQL 15+"]
+        B[(Base de Datos)]
+        B --> D[Schema Estrella]
+        D --> E[Tablas de Hechos<br/>ventas · inventario · devoluciones]
+        D --> F[Tablas de Dimensiones<br/>productos · clientes · tiempo · categorías · sucursales]
+        E --> G[Vistas Materializadas<br/>mv_rotacion_mensual · mv_stock_actual · mv_top_productos]
+    end
+
+    subgraph MB["Metabase OSS"]
+        H[Conexión JDBC] --> I[Dashboards]
+        I --> J[Rotación por Categoría]
+        I --> K[Stock Actual vs Mínimo]
+        I --> L[Top 10 Ventas]
+        I --> M[Alertas Stock Crítico]
+    end
+
+    C --> B
+    C --> H
+    H -->|Consultas SQL| B
 ```
 
-*(Diagrama Mermaid detallado disponible en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md))*
+*Diagrama completo y detallado en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)*
 
 ## Tech Stack
 
