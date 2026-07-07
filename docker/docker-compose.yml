@@ -30,7 +30,7 @@ services:
 
   # ─── Metabase OSS (BI Visualization) ──────────────────────────────────────
   metabase:
-    image: metabase/metabase:latest
+    image: metabase/metabase:v0.62.3
     container_name: metabase-app
     ports:
       - "${METABASE_PORT}:3000"

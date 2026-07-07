@@ -34,12 +34,12 @@ SELECT
     pr.nombre AS proveedor,
     CASE
         WHEN p.stock_actual <= p.stock_minimo THEN 'ALERTA'
-        WHEN p.stock_actual <= p.stock_minimo * 1.2 THEN 'PRECAUCION'
+        WHEN p.stock_actual <= p.stock_minimo * 1.1 THEN 'PRECAUCION'
         ELSE 'OK'
     END AS estado
 FROM productos p
 JOIN proveedores pr ON p.proveedor_id = pr.id
-WHERE p.stock_actual <= p.stock_minimo * 1.2
+WHERE p.stock_actual <= p.stock_minimo * 1.1
 ORDER BY p.stock_actual ASC;
 
 -- 3. Top 10 Productos más vendidos

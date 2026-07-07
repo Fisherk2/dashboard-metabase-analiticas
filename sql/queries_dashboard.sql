@@ -22,7 +22,7 @@ SELECT
     productos_vendidos
 FROM mv_rotacion_mensual
 WHERE anio = 2026
-  AND mes = '03'
+  AND mes = 'Marzo'
 ORDER BY ventas_totales DESC;
 
 -- Tiempo esperado: <50ms (MV + índice idx_mv_rotacion_mes_anio)

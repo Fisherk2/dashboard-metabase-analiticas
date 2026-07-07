@@ -68,9 +68,9 @@ class TestAgentsVerification:
                     full_path = root / ref_path
                     assert full_path.exists(), f"Link rotos: {ref_path} (line: {line.strip()[:80]})"
 
-    def test_agents_version_24(self, root: Path):
+    def test_agents_version(self, root: Path):
         content = (root / "AGENTS.md").read_text()
-        assert "v2.4" in content or "2.4" in content, "AGENTS.md debe ser v2.4"
+        assert "v2.5" in content or "2.5" in content, "AGENTS.md debe ser v2.5 (release v1.0.0)"
 
 
 class TestWorkflowVerification:
