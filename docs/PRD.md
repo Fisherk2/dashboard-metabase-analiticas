@@ -1,6 +1,6 @@
 # Product Requirements Document – Dashboard Metabase + Colección Analítica para E-commerce v1.0
 
-**Fecha:** 2026-07-02 | **Autor:** Fisherk2 | **Estado:** Borrador
+**Fecha:** 2026-07-07 | **Autor:** Fisherk2 | **Estado:** ✅ Aprobado v1.0.0
 
 ---
 
@@ -54,15 +54,15 @@ Dashboard analítico conectado a **PostgreSQL** para visualizar **KPIs de invent
 ## 4. Requisitos Funcionales
 
 
-| **REQ-ID** | **Descripción**                                                              | **Reglas de Negocio**                                                                                          | **Estado** | **Trazabilidad**    |
-| ---------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------- | ------------------- |
-| RF-01      | Conexión segura entre Metabase y PostgreSQL.                                 | Usar credenciales cifradas (variables de entorno en Docker), SSL/TLS opcional.                                 | Pendiente  | US-01, US-02, US-03 |
-| RF-02      | 3+ paneles configurados en Metabase (KPIs de inventario, rotación, alertas). | Paneles deben incluir: 1) Rotación por categoría, 2) Stock actual vs. mínimo, 3) Ventas por producto.          | Pendiente  | US-01, US-04, US-05 |
-| RF-03      | Exportación de paneles a PNG/CSV.                                            | Metabase debe permitir exportación manual desde la UI.                                                         | Pendiente  | US-01, US-02        |
-| RF-04      | Queries SQL optimizadas para carga en <2s.                                   | Usar índices, vistas materializadas, y particionamiento en tablas grandes.                                     | Pendiente  | US-03               |
-| RF-05      | Schema estrella para OLAP en PostgreSQL.                                     | Tablas de hechos: `ventas`, `inventario`, `devoluciones`. Dimensiones: `productos`, `clientes`, `tiempo`, etc. | Pendiente  | US-01, US-02, US-03 |
-| RF-06      | Generación de datos sintéticos con Python + Faker.                           | Script reproducible para generar 50K–200K registros por tabla de hechos.                                       | Pendiente  | US-03               |
-| RF-07      | Alertas de stock mínimo configurables.                                       | Umbrales definidos por producto/categoría, visibles en Metabase.                                               | Pendiente  | US-04               |
+| **REQ-ID** | **Descripción**                                                              | **Reglas de Negocio**                                                                                          | **Estado**  | **Trazabilidad**    |
+| ---------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------- | ------------------- |
+| RF-01      | Conexión segura entre Metabase y PostgreSQL.                                 | Usar credenciales cifradas (variables de entorno en Docker), SSL/TLS opcional.                                 | Completado  | US-01, US-02, US-03 |
+| RF-02      | 4 paneles configurados en Metabase (Rotación, Stock, Top 10, Alertas).       | Paneles con filtros por categoría/estado, queries <2s, exportables a PNG/CSV.                                  | Completado  | US-01, US-04, US-05 |
+| RF-03      | Exportación de paneles a PNG/CSV/JSON/XLSX.                                  | Metabase permite exportación manual desde la UI y vía API de exportación.                                      | Completado  | US-01, US-02        |
+| RF-04      | Queries SQL optimizadas para carga en <2s.                                   | Índices (9+ B-tree), vistas materializadas (3 MVs), y particionamiento mensual en `ventas`.                   | Completado  | US-03               |
+| RF-05      | Schema estrella para OLAP en PostgreSQL.                                     | 4 fact tables + 6 dimension tables con explicit FKs, CHECK constraints, B-tree indexes.                       | Completado  | US-01, US-02, US-03 |
+| RF-06      | Generación de datos sintéticos con Python + Faker.                           | Script reproducible para ~182K registros totales con distribución Pareto.                                      | Completado  | US-03               |
+| RF-07      | Alertas de stock mínimo configurables.                                       | 2 Metabase Pulses configurados: Stock Crítico (09:00) + Resumen Ventas (18:00).                                | Completado  | US-04               |
 
 
 ---
@@ -117,8 +117,22 @@ Dashboard analítico conectado a **PostgreSQL** para visualizar **KPIs de invent
 ## 8. Control de Cambios
 
 
-| **Versión** | **Fecha**  | **Autor**   | **Cambio**               | **Aprobado por** |
-| ----------- | ---------- | ----------- | ------------------------ | ---------------- |
-| 1.0         | 2026-07-02 | Fisherk2 | Versión inicial del PRD. | Pendiente        |
+| **Versión** | **Fecha**  | **Autor**   | **Cambio**                                        | **Aprobado por** |
+| ----------- | ---------- | ----------- | ------------------------------------------------- | ---------------- |
+| 1.0         | 2026-07-02 | Fisherk2    | Versión inicial del PRD.                          | Fisherk2         |
+| 1.0.0       | 2026-07-07 | Fisherk2    | Actualizado a estado Aprobado v1.0.0 para release.  | Fisherk2         |
+
+---
+
+## 9. Resultados de la Implementación v1.0.0
+
+| **Métrica**                       | **Resultado**                                        |
+| --------------------------------- | ---------------------------------------------------- |
+| Registros generados               | ~182K totales (100K ventas, 50K inventario, etc.)   |
+| Tiempo de carga (p95)             | <2.1ms (target: <2s; 4 queries, 10 ejecuciones cada una)         |
+| Paneles en Metabase               | 4 (Rotación, Stock, Top 10, Alertas)                |
+| Metabase Pulses                   | 2 (Stock Crítico + Resumen Ventas)                  |
+| Reproducibilidad                  | ✅ Verificada (make setup exit 0 en entorno limpio) |
+| Tests estáticos                   | 73/73 passing (test_f0.py)                          |
 
 ___

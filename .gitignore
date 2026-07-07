@@ -122,7 +122,7 @@ node_modules/
 
 # Docker y Contenedores - Excluye configuraciones de contenedores y orquestación
 .docker/
-docker-compose.override.yml
+/docker/docker-compose.override.yml
 *.kubeconfig
 kubeconfig*
 
@@ -187,5 +187,10 @@ local.properties
 local.gradle
 *.local
 *.override
+
+# Datos locales - Excluye datos generados y dumps de la base de datos
+data/
+*.sql.gz
+metabase-data/
 
 # Para añadir nueva regla: identificar categoría específica, evitar patrones demasiado amplios

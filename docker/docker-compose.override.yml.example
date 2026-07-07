@@ -1,0 +1,16 @@
+# docker-compose.override.yml — Personalizaciones locales
+# =============================================================================
+# Este archivo se combina automáticamente con docker-compose.yml.
+# Úsalo para configuraciones locales SIN modificar el archivo commiteado.
+#
+# Ejemplo: exponer PostgreSQL para depuración local:
+#   services:
+#     postgres:
+#       ports:
+#         - "5432:5432"
+#
+# ⚠️  Este archivo NO se commitea con cambios reales.
+#     Mantenlo con services: {} vacío por defecto en el repositorio.
+# =============================================================================
+
+services: {}
