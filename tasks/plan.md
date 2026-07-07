@@ -1,125 +1,141 @@
-# Plan de Ejecución — F5: Despliegue
+# Plan de Ejecución — F6: Cierre
 
-**Fecha:** 2026-07-07 | **Autor:** Fisherk2 | **Fase:** F5 (📋 LISTO PARA PLANIFICAR)
-**Metodología:** Slicing vertical con checkpoints de calidad (patrón F0/F1/F2/F3/F4)
+**Fecha:** 2026-07-07 | **Autor:** Fisherk2 | **Fase:** F6 (📋 LISTO PARA PLANIFICAR)
+**Metodología:** Slicing vertical con checkpoints de calidad (patrón F0/F1/F2/F3/F4/F5) + Git Workflow release
 **Reemplaza:** N/A (nueva fase)
-**Alcance confirmado:** Documentación de portafolio (README premium + User Guide + Technical Guide) + validación de reproducibilidad. **Sin screenshots**, **sin video tutorial** (F5-04 descartado por decisión del usuario).
+**Alcance confirmado:** Revisión exhaustiva de todos los docs + llenar Tech Debt + documentar lecciones aprendidas + release v1.0.0 vía Git Workflow con empirical testing.
 
 ---
 
 ## 1. Resumen
 
-F5 convierte el proyecto de **producto funcional** a **proyecto de portafolio presentable**. El usuario es Fisherk2 mostrando el proyecto a employers/clientes. El éxito se mide por: (a) un README que enganche en los primeros 30 segundos, (b) una User Guide que demuestre dominio de Metabase, (c) una Technical Guide que demuestre profundidad técnica (SQL, schema, optimización), y (d) reproducibilidad verificada en entorno limpio.
+F6 es la **fase final** del proyecto. Convierte el trabajo acumulado (16 commits en `feat/mvp-dashboard`) en un release versionado y publicado. El éxito se mide por: (a) documentación consistente y sin contradicciones, (b) registro explícito de deuda técnica, (c) lecciones aprendidas documentadas para futuro, y (d) un tag v1.0.0 publicado en el remote con todas las garantías de calidad.
 
-**Estimación total:** 8-10 horas (~1 día)
+**Estimación total:** 4-6 horas (~0.5 días, según WORKFLOW.md F6)
 **Vertical slices:** 4
 **Checkpoints:** 4 (quality gates)
-**Commits atómicos esperados:** 5-7
+**Commits atómicos esperados:** 4 (uno por slice, o más si fixes durante testing)
 **Decisiones confirmadas vía question tool:**
-- ✅ Alcance: 4 slices (README + User Guide + Tech Guide + Reproducibilidad)
-- ✅ Screenshots: NO — solo texto + diagramas Mermaid
-- ✅ Video tutorial (F5-04): NO — descartado por decisión del usuario
-- ✅ Reproducibilidad (F5-05): Mismo host + mismo máquina (clonar repo en otra carpeta)
+- ✅ F6-01 review: TODOS los docs (4 explícitos + 4 de F5 + tech docs)
+- ✅ TECH_DEBT.md: LLENAR con datos reales del proyecto
+- ✅ F6-03 Git Workflow: merge a develop → release branch → empirical testing → merge a main + tag v1.0.0 + push → sync back a develop
+- ✅ Remote: `https://github.com/Fisherk2/dashboard-metabase-analiticas` (ya configurado)
+- ✅ Branches remotos existentes: `main`, `develop`
 
 ---
 
 ## 2. Estado Actual Detectado
 
-| Elemento | Estado | Acción F5 |
+| Elemento | Estado | Acción F6 |
 |----------|--------|-----------|
-| `README.md` | ⚠️ Esqueleto básico (86 líneas) con badges y Quick Start | **Expandir** a ~250 líneas: descripción impactante, features, arquitectura, instalación completa, troubleshooting, arquitectura visual |
-| `docs/USER_GUIDE.md` | ❌ No existe | **Crear** desde cero: cómo usar Metabase, interpretar paneles, exportar |
-| `docs/TECHNICAL_GUIDE.md` | ❌ No existe | **Crear** desde cero: arquitectura, star schema, queries, optimización, particionamiento |
-| `docs/ARCHITECTURE.md` | ✅ Existe (F0) | **Consumir** como referencia para Tech Guide (no duplicar) |
-| `docs/SCHEMA.md` | ✅ Existe (F2) | **Consumir** como referencia para Tech Guide |
-| `docs/METABASE_SETUP.md` | ✅ Existe (F3) | **Consumir** como referencia para User Guide |
-| `docs/METABASE_EXPORTS.md` | ✅ Existe (F4) | **Linkear** desde User Guide |
-| Reproducibilidad (roundtrip) | ✅ `test_persistence.sh` existe (F4) | **Ejecutar** en directorio separado y documentar |
-| Patrones arquitectura | ✅ ADRs en `specs/adr/` (F0-F4) | **Linkear** desde Tech Guide |
+| `docs/PRD.md` | ⚠️ Borrador sin actualizar (fecha 2026-07-02, estado "Borrador") | **Actualizar** fecha, estado, record counts, version |
+| `docs/TRD.md` | ⚠️ Borrador sin actualizar (fecha 2026-07-02, estado "Borrador") | **Actualizar** fecha, estado, record counts, version |
+| `docs/AGENTS.md` | ✅ Actualizado a v2.4 (F5) | **Verificar** links y consistencia |
+| `docs/WORKFLOW.md` | ✅ Actualizado a v1.5 (F5 marcado) | **Verificar** + actualizar a v1.6 al cerrar F6 |
+| `docs/USER_GUIDE.md` | ✅ Creado en F5 (298 líneas) | **Cross-ref check** con PRD/TRD |
+| `docs/TECHNICAL_GUIDE.md` | ✅ Creado en F5 (445 líneas) | **Cross-ref check** con PRD/TRD |
+| `docs/REPRODUCIBILITY.md` | ✅ Creado en F5 (93 líneas) | **Cross-ref check** + fuente para TECH_DEBT |
+| `docs/TECH_DEBT.md` | ❌ Plantilla con placeholders (`[YYYY-MM-DD]`, `[Nombre]`, etc.) | **Llenar** con 4 items reales |
+| `docs/LESSONS_LEARNED.md` | ❌ No existe | **Crear** con 6+ secciones |
+| Git state | ✅ 16 commits en `feat/mvp-dashboard`, branches `main`/`develop` existen | **Workflow** release v1.0.0 |
+| Remote | ✅ `origin` configurado a `Fisherk2/dashboard-metabase-analiticas` | **Push** v1.0.0 |
 
 ---
 
 ## 3. Slices y Tareas
 
-### Slice 1: README Premium (F5-01)
+### Slice 1: Document Review (F6-01)
 
-**Objetivo:** Convertir el README de esqueleto a presentación de portafolio impactante. El README es lo primero que ve un employer — debe enganchar en los primeros 30 segundos y demostrar skills en 2 minutos.
+**Objetivo:** Garantizar que todos los docs del proyecto estén consistentes, sin placeholders, y reflejen el estado final. El proyecto pasa de "producto funcional" a "proyecto versionado presentable".
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F5-01.1** | Reestructurar README: añadir secciones (Descripción, Features, Demo, Tech Stack, Architecture, Quick Start, Installation, Usage, Documentation, Project Structure, Development, Testing, Performance, Security, License, Contributing). Mantener badges. | 1.5 h | README tiene ~250 líneas, todas las secciones pobladas, sin placeholders | F4 ✅ |
-| **F5-01.2** | Añadir diagrama Mermaid de arquitectura (services + flujo) en README. Referenciar `docs/ARCHITECTURE.md` para detalle. | 30 min | Diagrama renderiza en GitHub | F5-01.1 |
-| **F5-01.3** | Añadir tabla de "What You'll Learn" (skills demostradas: Star Schema, SQL Optimization, Metabase, Docker, Python, Make). | 30 min | Tabla presente, 5-8 skills listadas | F5-01.1 |
-| **F5-01.4** | Verificar con `python -m pytest tests/test_f0.py` que los tests de README siguen pasando (test_f0 valida que README tiene secciones esperadas). | 15 min | `make test` exit 0 (F0 README tests) | F5-01.1..3 |
+| **F6-01.1** | Actualizar `docs/PRD.md`: fecha 2026-07-07, estado "Borrador" → "✅ Aprobado v1.0.0", record counts (50K-200K → ~182K), version 1.0.0 | 15 min | PRD.md sin placeholders, status Aprobado, version 1.0.0 | F5 ✅ |
+| **F6-01.2** | Actualizar `docs/TRD.md`: fecha 2026-07-07, estado "Borrador" → "✅ Aprobado v1.0.0", record counts, version 1.0.0 | 15 min | TRD.md sin placeholders, status Aprobado, version 1.0.0 | F5 ✅ |
+| **F6-01.3** | Verificar `docs/AGENTS.md`: confirmar v2.4, todos los links relativos existen, sin contradicciones con otros docs | 10 min | `grep -r 'docs/' AGENTS.md` todos los targets existen | F5 ✅ |
+| **F6-01.4** | Verificar `docs/WORKFLOW.md`: F0-F5 marcado correcto, F6 marcado al cerrar, Gantt actualizado, hitos fechados | 10 min | Visual review, no contradicciones | F5 ✅ |
+| **F6-01.5** | Cross-ref check: USER_GUIDE/TECHNICAL_GUIDE/REPRODUCIBILITY vs PRD/TRD. Buscar contradicciones en: record counts, comandos, nombres de paneles, versiones | 20 min | Matriz de verificación completa, sin contradicciones | F5 ✅, T1.1-T1.4 |
+| **F6-01.6** | Spot-check: ARCHITECTURE.md, SCHEMA.md, TESTING.md, SECURITY.md, CODE_STYLE.md, METABASE_SETUP.md, METABASE_EXPORTS.md, APPFLOW.md — verificar que links no estén rotos y secciones referenciadas existen | 20 min | Todos los links `[texto](path)` apuntan a archivos existentes | T1.5 |
+| **F6-01.7** | Validar con `make test` que no hay regresión (F0 valida secciones de README) | 5 min | `make test` exit 0 | T1.1-T1.6 |
 
-**Subtotal Slice 1:** 2.75 horas
+**Subtotal Slice 1:** 1.5 horas (90 min)
 
-### Checkpoint 1: README Premium ✅
-- [ ] README tiene ≥200 líneas con todas las secciones
-- [ ] Diagrama Mermaid de arquitectura presente y renderizable
-- [ ] Tabla de skills presente
-- [ ] `make test` no rompe por cambios de README
-- [ ] Tiempo de lectura estimado: 2 minutos
+### Checkpoint 1: Document Review ✅
+- [ ] PRD.md y TRD.md actualizados con status Aprobado v1.0.0
+- [ ] AGENTS.md y WORKFLOW.md verificados
+- [ ] Cross-ref check sin contradicciones
+- [ ] Tech docs spot-checked
+- [ ] `make test` exit 0
+- [ ] `wc -l docs/*.md` documentado
 
 ---
 
-### Slice 2: User Guide (F5-02)
+### Slice 2: Technical Debt Register (F6-01.b)
 
-**Objetivo:** Crear `docs/USER_GUIDE.md` para usuarios finales (empleadores que quieren ver el dashboard funcionando, no la arquitectura). Enfoque en Metabase: login, navegación, interpretación de paneles, exportación.
+**Objetivo:** Llenar `docs/TECH_DEBT.md` con items reales del proyecto, basado en REPRODUCIBILITY.md, code review findings, y issues conocidos. Esto da visibilidad al lector del portafolio sobre lo que está resuelto y lo que queda pendiente.
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F5-02.1** | Crear `docs/USER_GUIDE.md` con secciones: Prerequisites, Setup (5 min), Acceder a Metabase, Tour del Dashboard (4 paneles explicados uno por uno: qué mide, cómo leerlo, qué significa cada estado), Exportar datos (link a METABASE_EXPORTS.md), Troubleshooting, FAQ. | 2 h | Doc existe, ≥150 líneas, cubre los 4 paneles | F4 ✅, F5-01 ✅ |
-| **F5-02.2** | Para cada panel, documentar: nombre, pregunta que responde, fuente de datos (MV o tabla), interpretación de estados (ej: ALERTA = stock_actual <= stock_minimo). | Incluido en F5-02.1 | Cada panel tiene interpretación | F5-02.1 |
+| **F6-02.1** | Llenar `docs/TECH_DEBT.md` con 4 items reales: <br>• **TD-001 (Resuelto F5)**: `make setup` no incluía `create-views` — corregido con commit `7330565` <br>• **TD-002 (Abierto)**: Particionamiento de `ventas` requiere migración manual (REPRODUCIBILITY Issue 2) <br>• **TD-003 (Abierto)**: Tests runtime usan credenciales hardcodeadas que no coinciden con `.env.example` (REPRODUCIBILITY Issue 3) <br>• **TD-004 (Abierto)**: 9 fallas pre-existentes en test suite runtime (port conflicts, Metabase setup no ejecutado) | 20 min | TECH_DEBT.md con 4+ items, formato completo (ID, descripción, riesgo, recomendación, estado) | F5 ✅, T1.5 (cross-ref con REPRODUCIBILITY) |
+| **F6-02.2** | Actualizar header de TECH_DEBT.md: fecha 2026-07-07, autor Fisherk2, estado "Activo", coverage conocido | 5 min | Header completo, no placeholders | T2.1 |
+| **F6-02.3** | Añadir sección "Ítems Cerrados" con TD-001 marcado como cerrado en v1.0.0 | 5 min | Histórico de cierres | T2.1 |
 
-**Subtotal Slice 2:** 2 horas
+**Subtotal Slice 2:** 30 minutos
 
-### Checkpoint 2: User Guide ✅
-- [ ] `docs/USER_GUIDE.md` existe y es ≥150 líneas
-- [ ] Los 4 paneles tienen interpretación
-- [ ] Sección Troubleshooting cubre top 3 issues
-- [ ] Link a `docs/METABASE_EXPORTS.md` presente
+### Checkpoint 2: Technical Debt ✅
+- [ ] TECH_DEBT.md tiene 3+ items abiertos documentados
+- [ ] 1+ item cerrado en v1.0.0 (TD-001)
+- [ ] Formato consistente con plantilla (sin placeholders)
+- [ ] Header completo con fecha/autor/estado
 
 ---
 
-### Slice 3: Technical Guide (F5-03)
+### Slice 3: Lessons Learned (F6-02)
 
-**Objetivo:** Crear `docs/TECHNICAL_GUIDE.md` para audiencia técnica (empleadores evaluando SQL/arquitectura). Profundidad: por qué se tomó cada decisión, qué patrones se aplicaron, cómo está optimizado.
+**Objetivo:** Crear `docs/LESSONS_LEARNED.md` como síntesis ejecutiva de todo el proyecto. Este doc es el "regalo" al lector: las decisiones de diseño y lecciones que el autor aprendió en cada fase, presentadas para que otros puedan evitar los mismos tropiezos.
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F5-03.1** | Crear `docs/TECHNICAL_GUIDE.md` con secciones: Architecture Overview, Star Schema Design (referencia a SCHEMA.md), Materialized Views Strategy, Query Optimization (referencia a queries_performance.sql), Partitioning Strategy, Metabase Configuration (referencia a METABASE_SETUP.md), Testing Strategy, Performance Validation, Reproducibility. | 3 h | Doc existe, ≥300 líneas, cobertura completa de decisiones técnicas | F4 ✅, F5-01 ✅ |
-| **F5-03.2** | Añadir sección "Lessons Learned" (top 5 decisiones y trade-offs: ej: por qué Spanish month names en MV, por qué `make test-queries` corre en container, por qué MVs vs. tablas base). | Incluido en F5-03.1 | 5+ lecciones documentadas | F5-03.1 |
-| **F5-03.3** | Añadir diagrama Mermaid de flujos de datos (PostgreSQL → MVs → Metabase → Usuario). | Incluido en F5-03.1 | Diagrama presente | F5-03.1 |
+| **F6-03.1** | Crear `docs/LESSONS_LEARNED.md` con estructura: Introducción + 6 secciones (una por fase F0-F5) + 1 sección "Cross-Phase Patterns" | 10 min | Doc existe, ≥200 líneas, 7 secciones | F5 ✅ |
+| **F6-03.2** | Sintetizar lecciones de cada fase, extrayendo de: WORKFLOW.md v1.0-v1.5 (cambios + lecciones), TECHNICAL_GUIDE.md §10 (7 lessons learned), REPRODUCIBILITY.md (issues), code review findings | 40 min | 3-5 lecciones por fase, cada una con formato: **Problema** → **Solución** → **Lección** | T3.1 |
+| **F6-03.3** | Añadir sección "Cross-Phase Patterns": TDD, slicing vertical, code review multi-eje, source-driven development, documentar para portafolio | 10 min | 5+ patterns cross-phase documentados | T3.2 |
 
-**Subtotal Slice 3:** 3 horas
+**Subtotal Slice 3:** 60 minutos
 
-### Checkpoint 3: Technical Guide ✅
-- [ ] `docs/TECHNICAL_GUIDE.md` existe y es ≥300 líneas
-- [ ] Cubre: arquitectura, schema, MVs, queries, partitioning, Metabase, testing
-- [ ] Sección Lessons Learned con 5+ entradas
-- [ ] Diagramas Mermaid presentes
+### Checkpoint 3: Lessons Learned ✅
+- [ ] `docs/LESSONS_LEARNED.md` existe, ≥200 líneas
+- [ ] 6 fases cubiertas con 3-5 lecciones cada una
+- [ ] Formato consistente: Problema → Solución → Lección
+- [ ] Sección Cross-Phase con 5+ patterns
 
 ---
 
-### Slice 4: Reproducibilidad (F5-05)
+### Slice 4: Git Workflow Release v1.0.0 (F6-03)
 
-**Objetivo:** Verificar que el proyecto es reproducible desde cero en un entorno limpio. Decisión del usuario: **mismo host + misma máquina** (clonar repo en otra carpeta, ejecutar `make setup` y validar).
+**Objetivo:** Versionar y publicar v1.0.0 mediante un Git Workflow profesional: merge de trabajo → release branch → empirical testing con el usuario → merge a main + tag → push → sync back a develop. Esto garantiza que el release está validado antes de ser público.
 
 | ID | Tarea | Estimación | DoD | Dependencias |
 |----|-------|-----------|-----|--------------|
-| **F5-04.1** | Clonar repo en directorio separado (ej: `/tmp/f5-repro-test/`). Ejecutar `make setup` desde cero. Verificar exit 0. | 30 min | `make setup` exit 0 en directorio nuevo | F4 ✅ |
-| **F5-04.2** | Ejecutar `make test` y `make test-queries` en directorio nuevo. Verificar que pasan. | 15 min | Tests pasan en directorio nuevo | F5-04.1 |
-| **F5-04.3** | Ejecutar `ALLOW_DESTRUCTIVE=1 ./scripts/test_persistence.sh` en directorio nuevo. Verificar roundtrip completo. | 1 h | Roundtrip exit 0, tiempo documentado | F5-04.2 |
-| **F5-04.4** | Documentar resultados de reproducibilidad en `docs/REPRODUCIBILITY.md` (incluir: entorno, comandos, tiempo, resultados, issues encontrados si los hubo). | 30 min | Doc existe, ~50 líneas | F5-04.3 |
+| **F6-04.1** | `git checkout develop && git merge --no-ff feat/mvp-dashboard -m 'Merge F5: Despliegue'` — Consolidar trabajo en develop | 5 min | `git log develop --oneline -5` muestra commits de F5 | T1, T2, T3 ✅ |
+| **F6-04.2** | `git checkout -b release/v1.0.0 develop` — Crear rama de release | 2 min | `git branch` muestra `release/v1.0.0` | T4.1 |
+| **F6-04.3** | **Empirical testing con asistencia del agente**, ejecutando comando por comando: <br>• `make down` (limpiar servicios) <br>• `make destroy` (⚠️ borrar volúmenes) <br>• `cp .env.example .env` <br>• `make setup` (deps + up + db-init + data-generate + create-views + mv-refresh) <br>• `make test` (tests estáticos) <br>• `make test-queries` (rendimiento p95 <2s) <br>• `make metabase-setup` (paneles) <br>• `make metabase-pulse-test` (pulses) <br>• Verificar en Metabase UI: 4 dashboards + 2 pulses | 30 min | Todos los comandos exit 0, dashboards visibles en `http://localhost:3000` | T4.2 |
+| **F6-04.4** | Si empirical test pasa: <br>• `git checkout main && git merge --no-ff release/v1.0.0 -m 'Release v1.0.0'` <br>• `git tag -a v1.0.0 -m 'Release v1.0.0: Dashboard Metabase + Colección Analítica'` <br>• `git push origin main develop --tags` | 5 min | `git log main --oneline -3` muestra merge, `git tag -l` muestra v1.0.0, remote actualizado | T4.3 |
+| **F6-04.5** | Sync back: <br>• `git checkout develop && git merge --no-ff main -m 'Sync main → develop post-release v1.0.0'` <br>• `git push origin develop` | 3 min | `git log main..develop --oneline` está VACÍO | T4.4 |
+| **F6-04.6** | Cleanup: <br>• `git branch -d release/v1.0.0` <br>• Verificar `git status` limpio en develop | 2 min | `git branch` no muestra release/v1.0.0, `git status` clean | T4.5 |
+| **F6-04.7** | Verificación final: <br>• `git log --oneline --all -20` <br>• `git tag -l` muestra v1.0.0 <br>• `curl -s https://api.github.com/repos/Fisherk2/dashboard-metabase-analiticas/releases/latest` confirma v1.0.0 publicado | 3 min | Tag visible en GitHub, release publicado | T4.6 |
 
-**Subtotal Slice 4:** 2.25 horas
+**Subtotal Slice 4:** 50 minutos (más 30 min de empirical testing con el usuario)
 
-### Checkpoint 4: Reproducibilidad Validada ✅
-- [ ] `make setup` exit 0 en directorio nuevo
-- [ ] `make test` y `make test-queries` pasan
-- [ ] Roundtrip completo exit 0
-- [ ] `docs/REPRODUCIBILITY.md` documenta el proceso y resultados
+### Checkpoint 4: Release v1.0.0 ✅
+- [ ] Merge a develop exitoso
+- [ ] Release branch `release/v1.0.0` creada
+- [ ] Empirical testing: todos los comandos exit 0
+- [ ] Dashboards visibles en Metabase (4 paneles + 2 pulses)
+- [ ] Merge a main exitoso
+- [ ] Tag v1.0.0 creado y pusheado
+- [ ] Sync back a develop exitoso
+- [ ] `git log main..develop` vacío (sync confirmado)
+- [ ] Release visible en GitHub
 
 ---
 
@@ -127,69 +143,83 @@ F5 convierte el proyecto de **producto funcional** a **proyecto de portafolio pr
 
 ```mermaid
 graph TD
-    F5_01_1[F5-01.1: Reestructurar README] --> F5_01_2[F5-01.2: Diagrama Mermaid]
-    F5_01_1 --> F5_01_3[F5-01.3: Tabla skills]
-    F5_01_2 --> F5_01_4[F5-01.4: Validar tests F0]
-    F5_01_3 --> F5_01_4
-    F5_01_4 --> C1[Checkpoint 1: README Premium]
-    C1 --> F5_02_1[F5-02.1: User Guide]
-    F5_02_1 --> F5_02_2[F5-02.2: Interpretación paneles]
-    F5_02_2 --> C2[Checkpoint 2: User Guide]
-    C2 --> F5_03_1[F5-03.1: Technical Guide]
-    F5_03_1 --> F5_03_2[F5-03.2: Lessons Learned]
-    F5_03_1 --> F5_03_3[F5-03.3: Diagrama flujos]
-    F5_03_2 --> C3[Checkpoint 3: Tech Guide]
-    F5_03_3 --> C3
-    C3 --> F5_04_1[F5-04.1: Clonar repo]
-    F5_04_1 --> F5_04_2[F5-04.2: Ejecutar tests]
-    F5_04_2 --> F5_04_3[F5-04.3: Roundtrip]
-    F5_04_3 --> F5_04_4[F5-04.4: Doc REPRODUCIBILITY]
-    F5_04_4 --> C4[Checkpoint 4: Repro Validada]
-    C4 --> F6[F6: Cierre]
-
-    style F5_01_1 fill:#bbf,stroke:#333
-    style F5_02_1 fill:#bbf,stroke:#333
-    style F5_03_1 fill:#bbf,stroke:#333
-    style F5_04_1 fill:#bbf,stroke:#333
+    F6_01[Slice 1: Doc Review] --> F6_02[Slice 2: Tech Debt]
+    F6_01 --> F6_03[Slice 3: Lessons Learned]
+    F6_02 --> F6_04[Slice 4: Git Workflow]
+    F6_03 --> F6_04
+    F6_04 --> V100[v1.0.0 Tagged + Pushed]
+    
+    %% T1 tasks
+    F6_01_1[T1.1: Update PRD] --> F6_01_5[T1.5: Cross-ref]
+    F6_01_2[T1.2: Update TRD] --> F6_01_5
+    F6_01_3[T1.3: Verify AGENTS] --> F6_01_5
+    F6_01_4[T1.4: Verify WORKFLOW] --> F6_01_5
+    F6_01_5 --> F6_01_6[T1.6: Tech docs spot-check]
+    F6_01_6 --> F6_01_7[T1.7: make test]
+    F6_01_7 --> C1[Checkpoint 1 ✅]
+    
+    %% T2 tasks
+    F6_01_5 --> F6_02_1[T2.1: Fill TECH_DEBT]
+    F6_02_1 --> F6_02_2[T2.2: Update header]
+    F6_02_1 --> F6_02_3[T2.3: Closed items]
+    F6_02_2 --> C2[Checkpoint 2 ✅]
+    F6_02_3 --> C2
+    
+    %% T3 tasks
+    C1 --> F6_03_1[T3.1: Create LESSONS_LEARNED]
+    F6_03_1 --> F6_03_2[T3.2: Synthesize lessons]
+    F6_03_2 --> F6_03_3[T3.3: Cross-Phase Patterns]
+    F6_03_3 --> C3[Checkpoint 3 ✅]
+    
+    %% T4 tasks
+    C2 --> F6_04_1[T4.1: Merge to develop]
+    C3 --> F6_04_1
+    F6_04_1 --> F6_04_2[T4.2: Create release branch]
+    F6_04_2 --> F6_04_3[T4.3: Empirical testing]
+    F6_04_3 --> F6_04_4[T4.4: Tag + Push]
+    F6_04_4 --> F6_04_5[T4.5: Sync back]
+    F6_04_5 --> F6_04_6[T4.6: Cleanup]
+    F6_04_6 --> F6_04_7[T4.7: Verify]
+    F6_04_7 --> C4[Checkpoint 4 ✅]
+    
     style C1 fill:#9f9,stroke:#333
     style C2 fill:#9f9,stroke:#333
     style C3 fill:#9f9,stroke:#333
     style C4 fill:#f96,stroke:#333
+    style V100 fill:#ff9,stroke:#333
 ```
 
 **Leyenda:**
-- **Slice 1**: README Premium (4 tasks, S/M/M/XS)
-- **Slice 2**: User Guide (2 tasks, M/S)
-- **Slice 3**: Technical Guide (3 tasks, L + S + S)
-- **Slice 4**: Reproducibilidad (4 tasks, S/XS/M/S)
+- **Slice 1**: Document Review (7 tasks, S/S/S/S/M/M/XS)
+- **Slice 2**: Technical Debt (3 tasks, S/XS/XS)
+- **Slice 3**: Lessons Learned (3 tasks, S/M/S)
+- **Slice 4**: Git Workflow (7 tasks, XS/XS/L/XS/XS/XS/XS)
 
 ---
 
 ## 5. Checkpoints — Quality Gates
 
-### Checkpoint 1: README Premium
-- README ≥200 líneas con todas las secciones
-- Diagrama Mermaid renderiza en GitHub
-- `make test` no rompe por cambios de README
-- Tabla "What You'll Learn" presente
+### Checkpoint 1: Document Review
+- PRD.md y TRD.md con status Aprobado v1.0.0, sin placeholders
+- AGENTS.md v2.4 verificado, WORKFLOW.md F5 ✅
+- Cross-ref check sin contradicciones (USER_GUIDE ↔ PRD, etc.)
+- `make test` exit 0
 
-### Checkpoint 2: User Guide
-- `docs/USER_GUIDE.md` ≥150 líneas
-- Los 4 paneles tienen interpretación
-- Sección Troubleshooting cubre top 3 issues
-- Link a METABASE_EXPORTS.md presente
+### Checkpoint 2: Technical Debt
+- TECH_DEBT.md con 4+ items reales (1 cerrado, 3 abiertos)
+- Header completo, formato consistente
+- Plan de reducción para próximo ciclo
 
-### Checkpoint 3: Technical Guide
-- `docs/TECHNICAL_GUIDE.md` ≥300 líneas
-- Cubre: arquitectura, schema, MVs, queries, partitioning, Metabase, testing
-- Sección Lessons Learned con 5+ entradas
-- Diagramas Mermaid presentes
+### Checkpoint 3: Lessons Learned
+- `docs/LESSONS_LEARNED.md` existe, ≥200 líneas
+- 6 fases cubiertas con lecciones en formato Problema → Solución → Lección
+- Sección Cross-Phase con 5+ patterns
 
-### Checkpoint 4: Reproducibilidad Validada
-- `make setup` exit 0 en directorio nuevo
-- `make test` y `make test-queries` pasan
-- Roundtrip completo exit 0
-- `docs/REPRODUCIBILITY.md` documenta el proceso
+### Checkpoint 4: Release v1.0.0
+- Empirical testing exit 0 en todos los comandos
+- Tag v1.0.0 visible en `git tag -l`
+- `git log main..develop` VACÍO (sync confirmado)
+- Release visible en GitHub
 
 ---
 
@@ -197,96 +227,102 @@ graph TD
 
 | Riesgo | Impacto | Probabilidad | Mitigación | Contingencia |
 |--------|---------|--------------|------------|--------------|
-| **README muy largo (>400 líneas) ahuyenta lectores** | Medio | Media | Front-load lo impactante (descripción, features, demo) en primeros 30s; progressive disclosure con links a docs/ | Mover detalle a docs/ y dejar README como índice |
-| **User Guide muy técnico (pierde audiencia no-técnica)** | Bajo | Baja | User Guide enfocado en "qué hacer" no "cómo funciona"; referencia a Tech Guide para detalle | Dividir en USER_GUIDE.md (operativo) y QUICKSTART.md (5 min) |
-| **Tech Guide no demuestra profundidad real** | Alto | Media | Incluir EXPLAIN ANALYZE real, planes de queries, trade-offs documentados; lessons learned con decisiones reales (Spanish months, container-based testing) | Añadir sección "Benchmarks" con números reales |
-| **Roundtrip falla por servicios ya corriendo** | Bajo | Alta | Usar directorio separado con Docker volumes aislados; documentar prerequisites (Docker limpio) | Documentar cleanup manual si falla |
-| **Tests F0 rompen por cambios en README** | Bajo | Baja | Antes de modificar README, revisar `tests/test_f0.py` para entender qué secciones valida; mantener esas secciones | Actualizar tests F0 si las secciones cambian semánticamente |
-| **Tiempo se extiende >10h** | Medio | Media | Priorizar: README > User Guide > Tech Guide > Repro. Si falta tiempo, saltarse Slice 4 y documentar como "manual no automatizado" | Mover Slice 4 a F6 backlog |
+| **Empirical test encuentra bug bloqueante** | Alto | Media | El release branch es aislado: hotfix en release, retest, merge | Si hotfix no funciona, abortar release, volver a develop |
+| **Push a remote falla (permisos, network)** | Alto | Baja | `git push --dry-run` antes de push real; verificar `git remote -v` | Documentar push manual en LESSONS_LEARNED.md |
+| **Tag v1.0.0 ya existe** | Medio | Baja | `git tag -d v1.0.0 && git push origin :refs/tags/v1.0.0` antes de re-tag | Usar v1.0.1 si conflicto |
+| **Conflict en merge develop → main** | Medio | Media | Resolver con `-X theirs` (release gana) o `-X ours` (develop gana) según contexto | Manual merge si automático falla |
+| **PRD/TRD actualizaciones introducen contradicciones** | Bajo | Baja | Cross-ref check (T1.5) detecta antes de merge | Commit fix antes de T4.1 |
+| **Empirical testing toma >30min (servicios lentos)** | Bajo | Baja | Paciencia; los servicios pueden tardar en cold start | Continuar en sesión siguiente si excede tiempo |
 
 ---
 
 ## 7. Patrones Aplicados
 
-| Patrón | Tipo | Aplicación en F5 | Slice |
+| Patrón | Tipo | Aplicación en F6 | Slice |
 |--------|------|-------------------|-------|
-| **Progressive Disclosure** | UX/Docs | README = resumen + links; User/Tech Guide = detalle; links bidireccionales | S1, S2, S3 |
-| **Information Architecture** | UX/Docs | Jerarquía: README → USER_GUIDE → TECHNICAL_GUIDE → ARCHITECTURE/SCHEMA (F0-F2) | S1, S2, S3 |
-| **Template Method** | Docs | Estructura consistente en cada doc: Overview → Setup → Usage → Troubleshooting | S2, S3 |
-| **Facade** | Docs | `docs/AGENTS.md` como facade al ecosistema completo de docs | S1 |
-| **Roundtrip Test** | Testing | Slice 4 es un roundtrip test manual para validar reproducibilidad | S4 |
-| **Verification** | Testing | Cada checkpoint valida criterios objetivos (líneas, exit codes) | All |
+| **Repository Pattern (docs)** | Docs | TECH_DEBT.md como registro centralizado de deuda | S2 |
+| **Template Method (LESSONS_LEARNED)** | Docs | Estructura consistente Problema→Solución→Lección para cada fase | S3 |
+| **GitFlow (release branches)** | Git | Ramas `main`/`develop`/`feature/*`/`release/*` para versionado | S4 |
+| **Semantic Versioning** | Git | Tag v1.0.0 (MAJOR.MINOR.PATCH) | S4 |
+| **Empirical Testing** | QA | Ejecutar el sistema real con el usuario antes de release | S4 |
+| **Verification** | QA | Cada checkpoint valida criterios objetivos (exit codes, líneas, tags) | All |
+| **Synced Branches** | Git | Sync back de main → develop post-release | S4 |
 
-**NO aplica en F5:** Patrones de código (DDD, Repository, etc.) — F5 es documentación, no código. Las decisiones arquitectónicas ya están tomadas en ADRs y referenciadas desde Tech Guide.
+**NO aplica en F6:** Patrones de código (DDD, Repository, etc.) — F6 es cierre de proyecto (docs + git), no código. Las decisiones arquitectónicas ya están tomadas y documentadas en ADRs.
 
 ---
 
-## 8. Comandos de Verificación Global (F5 Complete)
+## 8. Comandos de Verificación Global (F6 Complete)
 
 ```bash
 # 1. Validar estructura de docs
-ls -la README.md docs/USER_GUIDE.md docs/TECHNICAL_GUIDE.md docs/REPRODUCIBILITY.md
+ls -la docs/PRD.md docs/TRD.md docs/AGENTS.md docs/WORKFLOW.md
+ls -la docs/TECH_DEBT.md docs/LESSONS_LEARNED.md
 
-# 2. Validar tamaño de docs
-wc -l README.md docs/USER_GUIDE.md docs/TECHNICAL_GUIDE.md docs/REPRODUCIBILITY.md
-# Esperado: README ≥200, USER_GUIDE ≥150, TECHNICAL_GUIDE ≥300, REPRODUCIBILITY ≥50
+# 2. Validar estado de docs
+grep -E "Aprobado|✅" docs/PRD.md docs/TRD.md | head -3
+grep -c "^- \[ \]" docs/TECH_DEBT.md  # Items en TECH_DEBT
 
 # 3. Validar tests no rompen
 make test
-# Esperado: 313+ static passing (mismo baseline que F4)
+# Esperado: 73+ static passing (sin regresión)
 
-# 4. Validar reproducibilidad
-cd /tmp && git clone <repo> f5-repro-test && cd f5-repro-test
-make setup      # exit 0
-make test       # exit 0
-make test-queries  # exit 0
-ALLOW_DESTRUCTIVE=1 ./scripts/test_persistence.sh  # exit 0
+# 4. Validar reproducibilidad (en release branch)
+make down && make destroy && make setup
+make test
+make test-queries
+make metabase-setup
 
-# 5. Validar diagramas Mermaid renderizan
-# Abrir README.md y docs/TECHNICAL_GUIDE.md en GitHub — diagramas deben visualizarse
+# 5. Validar Git state
+git log --oneline main -5          # Ver commits mergeados
+git tag -l                         # Ver v1.0.0
+git log main..develop --oneline    # Debe ser vacío
+git status                         # Limpio
+
+# 6. Validar remote
+curl -s https://api.github.com/repos/Fisherk2/dashboard-metabase-analiticas/releases/latest
+# Debe mostrar tag_name: v1.0.0
 ```
 
 ---
 
-## 9. Métricas F5
+## 9. Métricas F6
 
 | Métrica | Valor Objetivo | Medición |
 |---------|---------------|----------|
-| Tareas completadas | 13 | tasks/todo.md checkboxes |
+| Tareas completadas | 17 | tasks/todo.md checkboxes |
 | Checkpoints pasados | 4/4 | Checkpoint sections §5 |
-| Tiempo total | 8-10 h | Clock |
-| Archivos creados/modificados | 4 (README + 3 docs nuevos) | `git diff --name-only F4..F5` |
-| Commits atómicos | 5-7 | `git log --oneline F4..F5` |
-| Líneas de documentación | ≥700 (200+150+300+50) | `wc -l` |
-| Tests passing | ≥313 (sin regresión) | `make test` |
-| Roundtrip exit code | 0 | `test_persistence.sh` |
-| Reproducibilidad en dir nuevo | exit 0 todos los comandos | Manual |
+| Tiempo total | 4-6 h | Clock |
+| Archivos modificados | 4 (PRD, TRD, AGENTS, WORKFLOW) | git diff |
+| Archivos creados | 2 (TECH_DEBT, LESSONS_LEARNED) | git status |
+| Commits atómicos | 4 (uno por slice) | git log --oneline |
+| Empirical tests exit 0 | 8+ comandos | Manual con usuario |
+| Tag v1.0.0 | Publicado en remote | `git ls-remote --tags origin` |
+| Branches sincronizados | `main..develop` vacío | `git log main..develop --oneline` |
 
-**Definición de "Done" por Capa (F5):**
-- **README**: engancha en 30s, demuestra skills, linkea a docs detalladas
-- **User Guide**: usuario no-técnico puede usar Metabase sin ayuda
-- **Technical Guide**: reviewer técnico entiende decisiones y optimizaciones
-- **Reproducibilidad**: proyecto corre desde cero en entorno limpio
+**Definición de "Done" por Capa (F6):**
+- **Documentación**: PRD, TRD, AGENTS, WORKFLOW, TECH_DEBT, LESSONS_LEARNED — todos consistentes, sin placeholders, con fechas y versiones correctas
+- **Git State**: v1.0.0 tagged, pusheado, main y develop sincronizados
+- **Validation**: Empirical testing confirma que el release funciona en entorno limpio
+- **Handoff**: Proyecto versionado y público, listo para portafolio
 
 ---
 
 ## 10. Estado Actual y Siguiente Fase
 
-**F4: Pruebas** — ✅ COMPLETADO (8 tasks, 4 slices, 8 commits atómicos, 38 tests, code review multi-eje 7 observaciones)
+**F5: Despliegue** — ✅ COMPLETADO (5 tasks, 4 slices, 9 commits atómicos, docs premium + reproducibilidad + code review multi-eje)
 
-**F5: Despliegue** — 📋 PLAN APROBADO — Listo para ejecutar. Alcance:
-- README premium con skills + arquitectura + diagramas
-- User Guide para audiencia operativa
-- Technical Guide para audiencia técnica
-- Validación de reproducibilidad en directorio separado
+**F6: Cierre** — 📋 PLAN APROBADO — Listo para ejecutar. Alcance:
+- Revisión exhaustiva de todos los docs (F6-01)
+- Llenar TECH_DEBT.md con datos reales (F6-01.b)
+- Documentar lecciones aprendidas (F6-02)
+- Git Workflow: develop ← release branch → main + tag v1.0.0 + push + sync back (F6-03)
 
-**F6: Cierre** — Próxima fase después de F5. Alcance:
-- Revisar todos los documentos
-- Documentar lecciones aprendidas en `docs/LESSONS_LEARNED.md`
-- Commit final y push
+**Proyecto Completado** — Después de F6, el proyecto está en v1.0.0 publicada, listo para presentación a employers/clientes.
 
-**Dependencias:** Requiere F4 completado ✅.
-**Estimación:** 1 día (según WORKFLOW.md F5).
+**Dependencias:** Requiere F5 completado ✅.
+**Estimación:** 0.5 días (según WORKFLOW.md F6).
+**Remote:** `https://github.com/Fisherk2/dashboard-metabase-analiticas` (ya configurado).
 
 ---
 
@@ -294,4 +330,4 @@ ALLOW_DESTRUCTIVE=1 ./scripts/test_persistence.sh  # exit 0
 
 | Versión | Fecha | Autor | Cambio | Lecciones Aprendidas |
 |---------|-------|-------|--------|---------------------|
-| 1.0 | 2026-07-07 | Fisherk2 | Versión inicial del plan F5 | Documentación de portafolio prioriza "first 30 seconds" (engagement) sobre completeness; progressive disclosure con 3 niveles (README → User → Tech) escala mejor que un solo mega-doc; reproducibilidad debe verificarse en entorno limpio (no en el directorio de desarrollo); sin screenshots el README se apoya en diagramas Mermaid para visual impact |
+| 1.0 | 2026-07-07 | Fisherk2 | Versión inicial del plan F6 | Release v1.0.0 via Git Workflow (develop → release branch → empirical testing → main + tag → sync back) garantiza que el release está validado antes de publicar; documentar lecciones en formato Problema→Solución→Lección escala mejor que prosa libre; TECH_DEBT.md con items reales (no plantilla) da visibilidad sobre lo resuelto y lo pendiente a employers; cross-ref check entre docs (T1.5) detecta contradicciones antes de que sean públicas |

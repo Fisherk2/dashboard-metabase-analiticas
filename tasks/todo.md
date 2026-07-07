@@ -1,85 +1,112 @@
-# TODO — F5: Despliegue
+# TODO — F6: Cierre
 
 **Fecha:** 2026-07-07 | **Estado:** 📋 PLAN APROBADO — Listo para ejecutar
 **Referencia:** [plan.md](plan.md)
 
 ---
 
-## Slice 1: README Premium (F5-01)
+## Slice 1: Document Review (F6-01)
 
-- [ ] **F5-01.1** — Reestructurar `README.md`: añadir secciones (Descripción, Features, Demo, Tech Stack, Architecture, Quick Start, Installation, Usage, Documentation, Project Structure, Development, Testing, Performance, Security, License, Contributing). Mantener badges.
-- [ ] **F5-01.2** — Añadir diagrama Mermaid de arquitectura (services + flujo) en README.
-- [ ] **F5-01.3** — Añadir tabla de "What You'll Learn" (skills demostradas).
-- [ ] **F5-01.4** — Validar `python -m pytest tests/test_f0.py` que los tests de README siguen pasando.
+- [ ] **F6-01.1** — Actualizar `docs/PRD.md`: fecha 2026-07-07, estado "Borrador" → "✅ Aprobado v1.0.0", record counts (~182K), version 1.0.0
+- [ ] **F6-01.2** — Actualizar `docs/TRD.md`: fecha 2026-07-07, estado "Borrador" → "✅ Aprobado v1.0.0", record counts, version 1.0.0
+- [ ] **F6-01.3** — Verificar `docs/AGENTS.md`: confirmar v2.4, todos los links relativos existen
+- [ ] **F6-01.4** — Verificar `docs/WORKFLOW.md`: F0-F5 marcado correcto, F6 marcado al cerrar, Gantt actualizado
+- [ ] **F6-01.5** — Cross-ref check: USER_GUIDE/TECHNICAL_GUIDE/REPRODUCIBILITY vs PRD/TRD (sin contradicciones en record counts, comandos, nombres de paneles, versiones)
+- [ ] **F6-01.6** — Spot-check: ARCHITECTURE/SCHEMA/TESTING/SECURITY/CODE_STYLE/METABASE_SETUP/METABASE_EXPORTS/APPFLOW — links no rotos
+- [ ] **F6-01.7** — Validar con `make test` que no hay regresión
 
-## Checkpoint 1: README Premium ✅
+## Checkpoint 1: Document Review ✅
 
-- [ ] README ≥200 líneas con todas las secciones
-- [ ] Diagrama Mermaid renderizable
-- [ ] `make test` exit 0 (sin regresión F0)
-- [ ] Tiempo de lectura: ~2 min
-
----
-
-## Slice 2: User Guide (F5-02)
-
-- [ ] **F5-02.1** — Crear `docs/USER_GUIDE.md` con secciones: Prerequisites, Setup, Acceder a Metabase, Tour del Dashboard (4 paneles), Exportar datos, Troubleshooting, FAQ.
-- [ ] **F5-02.2** — Para cada panel documentar: nombre, pregunta, fuente (MV/tabla), interpretación de estados.
-
-## Checkpoint 2: User Guide ✅
-
-- [ ] `docs/USER_GUIDE.md` ≥150 líneas
-- [ ] 4 paneles con interpretación completa
-- [ ] Top 3 issues en Troubleshooting
-- [ ] Link a METABASE_EXPORTS.md
+- [ ] PRD.md y TRD.md con status Aprobado v1.0.0
+- [ ] AGENTS.md y WORKFLOW.md verificados
+- [ ] Cross-ref check sin contradicciones
+- [ ] Tech docs spot-checked
+- [ ] `make test` exit 0
+- [ ] `wc -l docs/*.md` documentado
 
 ---
 
-## Slice 3: Technical Guide (F5-03)
+## Slice 2: Technical Debt (F6-01.b)
 
-- [ ] **F5-03.1** — Crear `docs/TECHNICAL_GUIDE.md` con secciones: Architecture Overview, Star Schema, Materialized Views, Query Optimization, Partitioning, Metabase, Testing, Performance, Reproducibility.
-- [ ] **F5-03.2** — Añadir sección "Lessons Learned" (5+ decisiones documentadas).
-- [ ] **F5-03.3** — Añadir diagrama Mermaid de flujos de datos (PG → MVs → Metabase → User).
+- [ ] **F6-02.1** — Llenar `docs/TECH_DEBT.md` con 4 items reales:
+  - TD-001 (Resuelto F5): `make setup` no incluía `create-views`
+  - TD-002 (Abierto): Particionamiento requiere migración manual
+  - TD-003 (Abierto): Tests runtime con credenciales hardcodeadas
+  - TD-004 (Abierto): 9 fallas pre-existentes en test suite runtime
+- [ ] **F6-02.2** — Actualizar header de TECH_DEBT.md: fecha, autor, estado
+- [ ] **F6-02.3** — Añadir sección "Ítems Cerrados" con TD-001
 
-## Checkpoint 3: Technical Guide ✅
+## Checkpoint 2: Technical Debt ✅
 
-- [ ] `docs/TECHNICAL_GUIDE.md` ≥300 líneas
-- [ ] Cubre las 9 secciones listadas
-- [ ] 5+ lecciones aprendidas
-- [ ] Diagrama de flujos presente
+- [ ] TECH_DEBT.md con 3+ items abiertos documentados
+- [ ] 1+ item cerrado en v1.0.0 (TD-001)
+- [ ] Formato consistente con plantilla (sin placeholders)
+- [ ] Header completo
 
 ---
 
-## Slice 4: Reproducibilidad (F5-05)
+## Slice 3: Lessons Learned (F6-02)
 
-- [ ] **F5-04.1** — Clonar repo en `/tmp/f5-repro-test/`. Ejecutar `make setup` desde cero. Verificar exit 0.
-- [ ] **F5-04.2** — Ejecutar `make test` y `make test-queries` en directorio nuevo. Verificar exit 0.
-- [ ] **F5-04.3** — Ejecutar `ALLOW_DESTRUCTIVE=1 ./scripts/test_persistence.sh` en directorio nuevo. Verificar exit 0.
-- [ ] **F5-04.4** — Documentar resultados en `docs/REPRODUCIBILITY.md` (entorno, comandos, tiempo, resultados).
+- [ ] **F6-03.1** — Crear `docs/LESSONS_LEARNED.md` con 6 secciones (F0-F5) + Cross-Phase Patterns
+- [ ] **F6-03.2** — Sintetizar lecciones de WORKFLOW.md v1.0-v1.5, TECHNICAL_GUIDE §10, REPRODUCIBILITY, code review findings
+- [ ] **F6-03.3** — Añadir sección "Cross-Phase Patterns" (TDD, slicing vertical, code review multi-eje, source-driven, documentar para portafolio)
 
-## Checkpoint 4: Reproducibilidad Validada ✅
+## Checkpoint 3: Lessons Learned ✅
 
-- [ ] `make setup` exit 0 en directorio nuevo
-- [ ] `make test` y `make test-queries` exit 0
-- [ ] Roundtrip completo exit 0
-- [ ] `docs/REPRODUCIBILITY.md` ≥50 líneas
+- [ ] `docs/LESSONS_LEARNED.md` existe, ≥200 líneas
+- [ ] 6 fases cubiertas con 3-5 lecciones cada una
+- [ ] Formato: Problema → Solución → Lección
+- [ ] Cross-Phase con 5+ patterns
+
+---
+
+## Slice 4: Git Workflow Release v1.0.0 (F6-03)
+
+- [ ] **F6-04.1** — `git checkout develop && git merge --no-ff feat/mvp-dashboard`
+- [ ] **F6-04.2** — `git checkout -b release/v1.0.0 develop`
+- [ ] **F6-04.3** — Empirical testing (con asistencia del agente):
+  - `make down` → `make destroy` → `cp .env.example .env` → `make setup`
+  - `make test` → `make test-queries`
+  - `make metabase-setup` → `make metabase-pulse-test`
+  - Verificar 4 dashboards + 2 pulses en Metabase UI
+- [ ] **F6-04.4** — Merge a main + tag v1.0.0 + push:
+  - `git checkout main && git merge --no-ff release/v1.0.0`
+  - `git tag -a v1.0.0 -m 'Release v1.0.0'`
+  - `git push origin main develop --tags`
+- [ ] **F6-04.5** — Sync back: `git checkout develop && git merge --no-ff main` + `git push origin develop`
+- [ ] **F6-04.6** — Cleanup: `git branch -d release/v1.0.0`
+- [ ] **F6-04.7** — Verificación final: `git log`, `git tag -l`, `curl GitHub API`
+
+## Checkpoint 4: Release v1.0.0 ✅
+
+- [ ] Merge a develop exitoso
+- [ ] Release branch creada
+- [ ] Empirical testing: todos los comandos exit 0
+- [ ] Dashboards visibles en Metabase
+- [ ] Merge a main exitoso
+- [ ] Tag v1.0.0 creado y pusheado
+- [ ] Sync back a develop exitoso
+- [ ] `git log main..develop` VACÍO
+- [ ] Release visible en GitHub
 
 ---
 
 ## Progreso
 
-- **Total tareas:** 13 (4 + 2 + 3 + 4)
-- **Tareas completadas:** 0/13
+- **Total tareas:** 17 (7 + 3 + 3 + 7)
+- **Tareas completadas:** 0/17
 - **Checkpoints pendientes:** 4/4
-- **Tiempo estimado:** 8-10h (~1 día)
-- **Commits esperados:** 5-7 atómicos
-- **Documentación a crear:** 3 archivos (USER_GUIDE, TECHNICAL_GUIDE, REPRODUCIBILITY)
-- **Documentación a expandir:** 1 archivo (README.md)
+- **Tiempo estimado:** 4-6h (~0.5 días)
+- **Commits esperados:** 4 atómicos (uno por slice) + posibles hotfix
+- **Archivos a modificar:** 4 (PRD, TRD, AGENTS, WORKFLOW)
+- **Archivos a crear:** 2 (TECH_DEBT, LESSONS_LEARNED)
+- **Remote:** `https://github.com/Fisherk2/dashboard-metabase-analiticas`
 
 ---
 
 ## Notas
 
-- **F5-04 (video tutorial)** descartado por decisión del usuario
-- **Screenshots** descartados — solo texto + diagramas Mermaid
-- **Reproducibilidad** en mismo host/máquina (clonar repo en otra carpeta)
+- **Empirical testing** requiere sesión interactiva con el usuario (no se puede automatizar completamente)
+- **Tag v1.0.0** solo se crea si T4.3 (empirical testing) pasa sin issues
+- **Si empirical test falla**: hotfix en release branch, retest, luego merge
+- **Push** asume que el remote `origin` tiene permisos de escritura (verificar con `git push --dry-run`)
