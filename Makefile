@@ -9,8 +9,8 @@ export
 DOCKER_COMPOSE = docker compose
 DOCKER_FILE = docker/docker-compose.yml
 PSQL = docker exec -i metabase-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
-PYTHON = python
-PIP = pip
+PYTHON = venv/bin/python
+PIP = venv/bin/pip
 GENERATOR = docker exec -i metabase-generator
 
 # ─── Default ─────────────────────────────────────────────────
@@ -68,7 +68,11 @@ db-check: ## Verificar que PostgreSQL está listo
 	docker exec -i metabase-postgres pg_isready -U $(POSTGRES_USER)
 
 # ─── Data Generation ─────────────────────────────────────────
-.PHONY: deps data-generate data-debug data-count
+.PHONY: venv deps data-generate data-debug data-count
+
+venv: ## Crear .venv local e instalar dependencias para make test y metabase-setup
+	python3 -m venv venv
+	venv/bin/python3 -m pip install --quiet -r scripts/requirements.txt
 
 deps: ## Instalar dependencias Python en el contenedor data-generator
 	$(GENERATOR) pip install -r /scripts/requirements.txt
@@ -79,12 +83,11 @@ data-generate: ## Generar datos sintéticos
 data-debug: ## Generar datos con logs detallados
 	$(GENERATOR) python /scripts/generate_data.py --debug
 
-data-count: ## Contar registros por tabla
-	@echo "=== Registros por tabla ==="
-	$(PSQL) -c "\dt" -q -t | awk '{print $$3}' | while read table; do \
-		count=$$($(PSQL) -c "SELECT COUNT(*) FROM $$table" -t -A 2>/dev/null); \
-		[ -n "$$count" ] && echo "  $$table: $$count"; \
-	done
+data-count: ## Contar registros en tablas del proyecto
+	@echo "=== Registros por tabla (proyecto) ==="
+	$(PSQL) -c "SELECT tabla, total::int FROM (SELECT 'categorias' AS tabla, COUNT(*) AS total FROM categorias UNION ALL SELECT 'proveedores', COUNT(*) FROM proveedores UNION ALL SELECT 'productos', COUNT(*) FROM productos UNION ALL SELECT 'clientes', COUNT(*) FROM clientes UNION ALL SELECT 'tiempo', COUNT(*) FROM tiempo UNION ALL SELECT 'promociones', COUNT(*) FROM promociones UNION ALL SELECT 'ventas', COUNT(*) FROM ventas UNION ALL SELECT 'inventario', COUNT(*) FROM inventario UNION ALL SELECT 'devoluciones', COUNT(*) FROM devoluciones UNION ALL SELECT 'logistica', COUNT(*) FROM logistica) sub ORDER BY tabla;" 2>/dev/null
+	@echo "---"
+	$(PSQL) -t -A -c "SELECT SUM(total)::text FROM (SELECT COUNT(*) AS total FROM categorias UNION ALL SELECT COUNT(*) FROM proveedores UNION ALL SELECT COUNT(*) FROM productos UNION ALL SELECT COUNT(*) FROM clientes UNION ALL SELECT COUNT(*) FROM tiempo UNION ALL SELECT COUNT(*) FROM promociones UNION ALL SELECT COUNT(*) FROM ventas UNION ALL SELECT COUNT(*) FROM inventario UNION ALL SELECT COUNT(*) FROM devoluciones UNION ALL SELECT COUNT(*) FROM logistica) sub;" 2>/dev/null | sed 's/^/  TOTAL: /'
 
 # ─── SQL Optimization ────────────────────────────────────────
 .PHONY: create-views mv-refresh indexes-check
@@ -107,13 +110,13 @@ indexes-check: ## Listar todos los índices
 .PHONY: metabase-setup metabase-export metabase-pulse-test
 
 metabase-setup: ## Configurar Metabase: DB connection + questions + dashboard + pulses via API
-	python scripts/setup_metabase.py --full
+	$(PYTHON) scripts/setup_metabase.py --full
 
 metabase-export: ## Exportar colección Metabase a JSON
-	python scripts/setup_metabase.py --export-only
+	$(PYTHON) scripts/setup_metabase.py --export-only
 
 metabase-pulse-test: ## Verificar Pulses via setup script (idempotente)
-	python scripts/setup_metabase.py --pulses
+	$(PYTHON) scripts/setup_metabase.py --pulses
 
 # ─── Testing ─────────────────────────────────────────────────
 .PHONY: test test-queries test-integrity test-full
@@ -134,9 +137,9 @@ test-integrity: ## Validar integridad referencial
 test-full: test-queries test-integrity ## Ejecutar todas las validaciones
 
 # ─── Utilities ───────────────────────────────────────────────
-.PHONY: setup clean
+.PHONY: setup clean venv
 
-setup: up deps db-init data-generate create-views mv-refresh ## 🚀 Setup completo del proyecto (up → deps → db-init → data-generate → MVs)
+setup: venv up deps db-init data-generate create-views mv-refresh ## 🚀 Setup completo: venv → up → deps → db-init → data-generate → MVs
 
 clean: ## Limpiar archivos temporales
 	@echo "Limpiando __pycache__, *.pyc, *.pyo, .pytest_cache..."
