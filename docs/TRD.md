@@ -1,6 +1,6 @@
 # Technical Requirements Document – Dashboard Metabase + Colección Analítica para E-commerce v1.0
 
-**Fecha:** 2026-07-02 | **Autor:** Fisherk2 | **Estado:** Borrador
+**Fecha:** 2026-07-07 | **Autor:** Fisherk2 | **Estado:** ✅ Aprobado v1.0.0
 
 ---
 
@@ -131,13 +131,13 @@ graph TD
 
 | **PRD REQ-ID** | **TRD Componente**            | **API/DB**                  | **Estado** |
 | -------------- | ----------------------------- | --------------------------- | ---------- |
-| RF-01          | Conexión Metabase-PostgreSQL  | PostgreSQL (JDBC)           | Pendiente  |
-| RF-02          | Paneles en Metabase           | Metabase (UI)               | Pendiente  |
-| RF-03          | Exportación PNG/CSV           | Metabase (UI)               | Pendiente  |
-| RF-04          | Queries optimizadas           | PostgreSQL (SQL)            | Pendiente  |
-| RF-05          | Schema estrella               | PostgreSQL (SQL)            | Pendiente  |
-| RF-06          | Script de generación de datos | Python (`generate_data.py`) | Pendiente  |
-| RF-07          | Alertas de stock mínimo       | PostgreSQL (Vistas)         | Pendiente  |
+| RF-01          | Conexión Metabase-PostgreSQL  | PostgreSQL (JDBC)           | Completado |
+| RF-02          | 4 Paneles en Metabase         | Metabase (UI)               | Completado |
+| RF-03          | Exportación PNG/CSV/JSON/XLSX | Metabase (UI + API)         | Completado |
+| RF-04          | Queries optimizadas           | PostgreSQL (SQL)            | Completado |
+| RF-05          | Schema estrella               | PostgreSQL (SQL)            | Completado |
+| RF-06          | Script de generación de datos | Python (`generate_data.py`) | Completado |
+| RF-07          | Alertas de stock mínimo       | PostgreSQL + Metabase Pulse | Completado |
 
 
 ---
@@ -153,5 +153,14 @@ graph TD
 | ADR-04     | Requisito de entorno reproducible y aislado.                          | Usar **Docker + Docker Compose** para contenerizar PostgreSQL y Metabase. | Portabilidad y consistencia, pero mayor uso de recursos locales.                                 | Instalación nativa           |
 | ADR-05     | Optimización de queries para KPIs críticos.                           | Usar **índices + vistas materializadas + particionamiento + CTEs**.       | Máximo rendimiento, pero mayor complejidad de mantenimiento.                                     | Solo índices o solo vistas   |
 | ADR-06     | Necesidad de documentar el proyecto para portafolio.                  | Usar **Markdown + badges en README** para documentación.                  | Fácil de mantener y visualmente atractivo, pero requiere esfuerzo inicial.                       | Documentación en Word/PDF    |
+
+---
+
+## 9. Control de Cambios
+
+| **Versión** | **Fecha**  | **Autor**   | **Cambio**                                        | **Aprobado por** |
+| ----------- | ---------- | ----------- | ------------------------------------------------- | ---------------- |
+| 1.0         | 2026-07-02 | Fisherk2    | Versión inicial del TRD.                          | Fisherk2         |
+| 1.0.0       | 2026-07-07 | Fisherk2    | Actualizado a estado Aprobado v1.0.0 para release. | Fisherk2         |
 
 ___
