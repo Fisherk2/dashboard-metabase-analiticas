@@ -225,6 +225,49 @@ class TestTechDocsSpotCheck:
                             f"Broken link in {doc_file.name}: '{ref}' -> {full} (line: {line.strip()[:80]})"
 
 
+class TestTechnicalDebt:
+    """F6-02: TECH_DEBT.md llenado con items reales."""
+
+    def test_tech_debt_exists(self, root: Path):
+        assert (root / "docs" / "TECH_DEBT.md").exists()
+
+    def test_tech_debt_no_placeholders(self, root: Path):
+        """No debe contener placeholders [YYYY-MM-DD], [Nombre], [N]."""
+        content = (root / "docs" / "TECH_DEBT.md").read_text()
+        assert "[YYYY-MM-DD]" not in content, "Tech debt tiene placeholder de fecha"
+        assert "[Nombre]" not in content, "Tech debt tiene placeholder de nombre"
+        assert "[N]" not in content or "Total de ítems" in content, \
+            "Tech debt tiene placeholders numéricos"
+
+    def test_tech_debt_has_header(self, root: Path):
+        content = (root / "docs" / "TECH_DEBT.md").read_text()
+        assert "2026-07-07" in content, "Tech debt debe tener fecha actual"
+        assert "Fisherk2" in content, "Tech debt debe tener autor"
+
+    def test_tech_debt_has_open_items(self, root: Path):
+        content = (root / "docs" / "TECH_DEBT.md").read_text()
+        assert "TD-002" in content, "Tech debt debe tener TD-002 documentado"
+        assert "TD-003" in content, "Tech debt debe tener TD-003 documentado"
+        assert "TD-004" in content, "Tech debt debe tener TD-004 documentado"
+
+    def test_tech_debt_has_closed_items(self, root: Path):
+        content = (root / "docs" / "TECH_DEBT.md").read_text()
+        assert "TD-001" in content, "Tech debt debe tener TD-001 (cerrado)"
+        assert "Cerrado" in content or "Resuelto" in content, \
+            "Tech debt debe tener sección de items cerrados"
+
+    def test_tech_debt_minimum_open_items(self, root: Path):
+        content = (root / "docs" / "TECH_DEBT.md").read_text()
+        # Count TD- entries
+        td_count = content.count("TD-0")
+        assert td_count >= 4, f"Tech debt debe tener >=4 ítems, tiene {td_count}"
+
+    def test_tech_debt_has_risk_ratings(self, root: Path):
+        content = (root / "docs" / "TECH_DEBT.md").read_text()
+        assert "Riesgo" in content or "riesgo" in content, \
+            "Tech debt debe tener ratings de riesgo"
+
+
 class TestFileLineCounts:
     """Document line counts for checkpoint record."""
 
