@@ -14,54 +14,37 @@ import pytest
 
 # ─── Slice 1: Document Review — PRD & TRD Status ──────────────
 
-class TestPrdStatus:
-    """F6-01.1: PRD.md debe reflejar estado final v1.0.0."""
+class TestDocStatus:
+    """F6-01.1/2: PRD y TRD deben reflejar estado final v1.0.0."""
 
-    def test_prd_exists(self, root: Path):
-        assert (root / "docs" / "PRD.md").exists()
+    @pytest.mark.parametrize("filename", ["PRD.md", "TRD.md"])
+    def test_doc_exists(self, root: Path, filename: str):
+        assert (root / "docs" / filename).exists()
 
-    def test_prd_has_aprobado_status(self, root: Path):
-        content = (root / "docs" / "PRD.md").read_text()
-        assert "Aprobado" in content, "PRD.md debe tener estado 'Aprobado'"
-        assert "Borrador" not in content, "PRD.md no debe decir 'Borrador'"
+    @pytest.mark.parametrize("filename", ["PRD.md", "TRD.md"])
+    def test_doc_has_aprobado_status(self, root: Path, filename: str):
+        content = (root / "docs" / filename).read_text()
+        assert "Aprobado" in content, f"{filename} debe tener estado 'Aprobado'"
+        assert "Borrador" not in content, f"{filename} no debe decir 'Borrador'"
 
-    def test_prd_has_current_date(self, root: Path):
-        content = (root / "docs" / "PRD.md").read_text()
-        assert "2026-07-07" in content, "PRD.md debe tener fecha 2026-07-07"
+    @pytest.mark.parametrize("filename", ["PRD.md", "TRD.md"])
+    def test_doc_has_current_date(self, root: Path, filename: str):
+        content = (root / "docs" / filename).read_text()
+        assert "2026-07-07" in content, f"{filename} debe tener fecha 2026-07-07"
 
-    def test_prd_has_version_100(self, root: Path):
-        content = (root / "docs" / "PRD.md").read_text()
-        assert "v1.0.0" in content, "PRD.md debe mencionar v1.0.0"
+    @pytest.mark.parametrize("filename", ["PRD.md", "TRD.md"])
+    def test_doc_has_version_100(self, root: Path, filename: str):
+        content = (root / "docs" / filename).read_text()
+        assert "v1.0.0" in content, f"{filename} debe mencionar v1.0.0"
 
     def test_prd_has_record_count(self, root: Path):
         content = (root / "docs" / "PRD.md").read_text()
-        assert "182K" in content or "182,465" in content or "182465" in content, \
+        assert any(p in content for p in ("182K", "182,465", "182465")), \
             "PRD.md debe mencionar ~182K registros"
 
-
-class TestTrdStatus:
-    """F6-01.2: TRD.md debe reflejar estado final v1.0.0."""
-
-    def test_trd_exists(self, root: Path):
-        assert (root / "docs" / "TRD.md").exists()
-
-    def test_trd_has_aprobado_status(self, root: Path):
-        content = (root / "docs" / "TRD.md").read_text()
-        assert "Aprobado" in content, "TRD.md debe tener estado 'Aprobado'"
-        assert "Borrador" not in content, "TRD.md no debe decir 'Borrador'"
-
-    def test_trd_has_current_date(self, root: Path):
-        content = (root / "docs" / "TRD.md").read_text()
-        assert "2026-07-07" in content, "TRD.md debe tener fecha 2026-07-07"
-
-    def test_trd_has_version_100(self, root: Path):
-        content = (root / "docs" / "TRD.md").read_text()
-        assert "v1.0.0" in content, "TRD.md debe mencionar v1.0.0"
-
     def test_trd_trazabilidad_no_pendiente(self, root: Path):
-        """La matriz de trazabilidad debe reflejar estado completado."""
+        """TRD: matriz de trazabilidad debe reflejar estado completado."""
         content = (root / "docs" / "TRD.md").read_text()
-        # All requirements should be completed in v1.0.0
         assert "Pendiente" not in content, \
             "TRD.md no debe tener requisitos Pendiente (todos completados)"
 
@@ -109,9 +92,8 @@ class TestWorkflowVerification:
 class TestCrossRefConsistency:
     """F6-01.5: Cross-ref check entre documentos."""
 
-    EXPECTED_RECORD_COUNT = "182K"
-
-    def _get_record_counts(self, root: Path) -> Dict[str, List[str]]:
+    @staticmethod
+    def _get_record_counts(root: Path) -> Dict[str, List[str]]:
         """Find record count mentions across docs. Returns {file: [lines_with_mentions]}."""
         patterns = ["182K", "182,465", "182465"]
         doc_dir = root / "docs"
@@ -160,43 +142,24 @@ class TestCrossRefConsistency:
 class TestTechDocsSpotCheck:
     """F6-01.6: Documentación técnica verificada."""
 
-    def test_architecture_md_exists(self, root: Path):
-        assert (root / "docs" / "ARCHITECTURE.md").exists()
+    TECH_DOCS: List[Tuple[str, int]] = [
+        ("ARCHITECTURE.md", 30),
+        ("SCHEMA.md", 30),
+        ("TESTING.md", 30),
+        ("SECURITY.md", 30),
+        ("CODE_STYLE.md", 30),
+        ("USER_GUIDE.md", 200),
+        ("TECHNICAL_GUIDE.md", 300),
+        ("REPRODUCIBILITY.md", 50),
+    ]
 
-    def test_schema_md_exists(self, root: Path):
-        assert (root / "docs" / "SCHEMA.md").exists()
-
-    def test_testing_md_exists(self, root: Path):
-        assert (root / "docs" / "TESTING.md").exists()
-
-    def test_security_md_exists(self, root: Path):
-        assert (root / "docs" / "SECURITY.md").exists()
-
-    def test_code_style_md_exists(self, root: Path):
-        assert (root / "docs" / "CODE_STYLE.md").exists()
-
-    def test_user_guide_md_exists(self, root: Path):
-        assert (root / "docs" / "USER_GUIDE.md").exists()
-
-    def test_technical_guide_md_exists(self, root: Path):
-        assert (root / "docs" / "TECHNICAL_GUIDE.md").exists()
-
-    def test_reproducibility_md_exists(self, root: Path):
-        assert (root / "docs" / "REPRODUCIBILITY.md").exists()
+    @pytest.mark.parametrize("filename,_", TECH_DOCS)
+    def test_tech_doc_exists(self, root: Path, filename: str, _: int):
+        assert (root / "docs" / filename).exists(), f"Falta {filename}"
 
     def test_docs_have_minimum_lines(self, root: Path):
         """Cada doc técnico debe tener contenido sustancial."""
-        file_specs: List[Tuple[str, int]] = [
-            ("ARCHITECTURE.md", 30),
-            ("SCHEMA.md", 30),
-            ("TESTING.md", 30),
-            ("SECURITY.md", 30),
-            ("CODE_STYLE.md", 30),
-            ("USER_GUIDE.md", 200),
-            ("TECHNICAL_GUIDE.md", 300),
-            ("REPRODUCIBILITY.md", 50),
-        ]
-        for fname, min_lines in file_specs:
+        for fname, min_lines in self.TECH_DOCS:
             f = root / "docs" / fname
             lines = f.read_text().splitlines()
             assert len(lines) >= min_lines, \
