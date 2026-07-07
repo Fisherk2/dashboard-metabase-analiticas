@@ -1,6 +1,6 @@
 # Lecciones Aprendidas — Dashboard Metabase + Colección Analítica v1.0.0
 
-**Fecha:** 2026-07-07 | **Autor:** Fisherk2 | **Fases:** F0–F5 (Preparación → Despliegue)
+**Fecha:** 2026-07-07 | **Autor:** Fisherk2 | **Fases:** F0–F6 (Preparación → Cierre)
 **Propósito:** Síntesis de decisiones de diseño, desafíos enfrentados y lecciones aprendidas en cada fase del proyecto.
 
 ---
@@ -181,41 +181,77 @@
 
 ---
 
-## 7. Patrones Cross-Phase
+## 7. F6: Cierre — Code Review y Release
+
+### 7.1 Code review multi-eje descubre bugs en código ya revisado
+
+**Problema:** El código de F0–F5 ya había pasado por code review multi-eje en sus respectivas fases. Sin embargo, una revisión final multi-eje en F6 descubrió 18 hallazgos adicionales (3 críticos, 8 importantes, 7 sugerencias) en código que se consideraba "revisado".
+
+**Solución:** Ejecutar code review multi-eje completo (cortesía de @tezcatlipoca) sobre todos los archivos modificados en F6, más generate_data.py, init.sql, setup_metabase.py, y las queries SQL. 17 archivos modificados, +127/-59 líneas. Commit `53f97cb`.
+
+**Lección:** El code review multi-eje debe aplicarse en cada fase, pero también al final como gate de calidad. Bugs que sobreviven a revisiones individuales son detectados por una revisión final que examina las interacciones entre módulos.
+
+### 7.2 Documentación cross-phase requiere verificación contra fuente de verdad
+
+**Problema:** Al actualizar la documentación en F6, se descubrieron inconsistencias propagadas desde fases anteriores: el tipo de `anio` era `VARCHAR(4)` en unos archivos e `INT` en otros; el umbral de stock mínimo era `*1.2` en la MV pero `*1.1` en la documentación; el conteo de registros decía "20 clientes" en lugar de "2,000 clientes".
+
+**Solución:** Para cada cambio documentado, verificar contra la fuente de verdad (schema SQL, queries de base de datos, no contra otra documentación). Usar tests estáticos (`test_f0.py`) como red de seguridad para detectar inconsistencias cross-file.
+
+**Lección:** La documentación se degrada más rápido que el código porque no tiene tests. Los tests estáticos que verifican consistencia cross-file (tipos de columnas, nombres, valores) son la única defensa contra documentación incorrecta.
+
+### 7.3 Tests estáticos como red de seguridad para refactors de documentación
+
+**Problema:** Al modificar 17 archivos de documentación y código en F6, existía el riesgo de romper enlaces, introducir inconsistencias de tipos, o desincronizar la especificación con la implementación.
+
+**Solución:** Ejecutar `make test` después de cada cambio significativo. Los 274 tests estáticos validan: estructura de directorios, existencia de archivos referenciados, formato de documentación, seguridad (secrets), y consistencia de tipos. 0 regresiones en los 275 tests estáticos tras los 18 fixes.
+
+**Lección:** Un test suite estático de documentación es la red de seguridad más rentable. Cada test es una assertion sobre el estado del proyecto que se verifica en segundos sin dependencias externas.
+
+### 7.4 Git Workflow Release requiere intervención manual
+
+**Problema:** El proceso de release (merge feat → develop → release branch → empirical testing → main + tag) no puede automatizarse completamente porque incluye pasos que requieren confirmación humana (merge approval, verificación empírica de dashboards).
+
+**Solución:** Documentar el proceso de release en los tests (`test_f6.py::TestGitWorkflow`) como 8 tests que validan cada paso del workflow. Los tests pasan de RED a GREEN a medida que se completa cada paso manual. Esto proporciona visibilidad del progreso sin forzar automatización donde no es apropiada.
+
+**Lección:** No todo debe automatizarse. Los tests son mejor herramienta que los scripts para guiar procesos manuales porque documentan el estado actual y verifican cada paso sin ejecutarlo automáticamente.
+
+---
+
+## 8. Patrones Cross-Phase
 
 Los siguientes patrones emergieron en múltiples fases y son aplicables a futuros proyectos:
 
-### 7.1 TDD como disciplina de diseño, no solo de testing
+### 8.1 TDD como disciplina de diseño, no solo de testing
 
 El ciclo RED-GREEN-REFACTOR no es solo para código — se aplica igualmente a documentación y configuración. En F6, escribir tests primero para PRD.md y TRD.md (RED) forzó a definir criterios de aceptación concretos antes de modificar los documentos. Los tests son la especificación ejecutable del estado final deseado.
 
 **Aplicación futura:** Para cualquier cambio en documentación, escribir primero el test que valida el estado deseado.
 
-### 7.2 Slicing vertical con checkpoints de calidad
+### 8.2 Slicing vertical con checkpoints de calidad
 
 Cada fase se dividió en 4 slices verticales con checkpoints intermedios. Esto permitió tener "done" parcial verificable después de cada slice, en lugar de esperar al final de la fase para validar. El patrón se repitió en F0-F6 con resultados consistentes.
 
 **Aplicación futura:** Para proyectos nuevos, planificar slices verticales de 1-2 horas con checkpoints explícitos. No avanzar al siguiente slice sin pasar el checkpoint actual.
 
-### 7.3 Code review multi-eje
+### 8.3 Code review multi-eje
 
 Desarrollado en F3 por @tezcatlipoca, este patrón de revisión evalúa el código en 6 dimensiones: estructura, errores, mantenibilidad, performance, seguridad y documentación. Se aplicó en F3, F4 y F5, descubriendo un total de 41 observaciones (incluyendo 4 críticas).
 
 **Aplicación futura:** Incorporar code review multi-eje como gate obligatorio antes de mergear cualquier cambio significativo a main.
 
-### 7.4 Source-driven development para APIs externas
+### 8.4 Source-driven development para APIs externas
 
 Cada interacción con APIs externas (Metabase REST API, Docker API) se fundamentó en documentación oficial, no en memoria o tutoriales de terceros. Este patrón evitó errores por APIs deprecadas o endpoints incorrectos.
 
 **Aplicación futura:** Para cualquier integración con sistema externo, consultar la documentación oficial de la versión específica antes de implementar. Documentar la fuente con URL completa en comentarios de código.
 
-### 7.5 Documentar para portafolio desde el día uno
+### 8.5 Documentar para portafolio desde el día uno
 
 El proyecto se documentó desde F0 con AGENTS.md y SPEC.md, no al final. Esto permitió que la documentación evolucionara con el código, en lugar de ser un esfuerzo masivo de post-producción. El resultado es documentación coherente y actualizada.
 
 **Aplicación futura:** Iniciar todo proyecto con un ARCHITECTURE.md y un README.md, aunque sean borradores. La documentación incremental requiere menos esfuerzo total que la documentación al final.
 
-### 7.6 Makefile como documento ejecutable
+### 8.6 Makefile como documento ejecutable
 
 El Makefile unificó todos los workflows del proyecto en una interfaz coherente. Cada target documenta su propósito via comentario `##` y su implementación concreta. `make help` lista todo el proyecto. Este patrón eliminó la necesidad de recordar comandos ad-hoc.
 
@@ -223,7 +259,7 @@ El Makefile unificó todos los workflows del proyecto en una interfaz coherente.
 
 ---
 
-## 8. Conclusión
+## 9. Conclusión
 
 El proyecto demostró que un dashboard analítico funcional y reproducible puede construirse con tecnologías open-source (PostgreSQL + Metabase + Docker + Python) siguiendo patrones de ingeniería profesional (TDD, slicing vertical, code review multi-eje, source-driven development).
 

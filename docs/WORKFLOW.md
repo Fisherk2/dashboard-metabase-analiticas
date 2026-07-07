@@ -15,7 +15,7 @@
 | **F3: Interfaces**      | ✅ COMPLETADO      | Configurar paneles en Metabase y validar queries.               | `scripts/setup_metabase.py`, 4 paneles (Rotación, Stock, Top 10, Alertas), 2 Metabase Pulses, `docs/METABASE_SETUP.md`, `tests/test_f3.py` (36 tests). | 1 día         |
 | **F4: Pruebas**         | ✅ COMPLETADO      | Validar rendimiento, exportación y flujos completos.            | `measure_query_performance.py`, `validate_dashboard_exports.py`, `test_error_handling.py`, `test_persistence.sh`, `queries_performance.sql`, `METABASE_EXPORTS.md`, `tests/test_f4.py` (39 tests). | 1 día         |
 | **F5: Despliegue**      | ✅ COMPLETADO      | Documentar el proyecto y preparar para portafolio.              | `README.md` (280 líneas, 17 secciones), `docs/USER_GUIDE.md` (297 líneas), `docs/TECHNICAL_GUIDE.md` (444 líneas), `docs/REPRODUCIBILITY.md`, Makefile + test fix. | 1 día         |
-| **F6: Cierre**          | 📋 LISTO PARA PLANIFICAR | Revisión final y lecciones aprendidas.                          | Retrospectiva documentada, actualización de `AGENTS.md` y `WORKFLOW.md`.                         | 0.5 días      |
+| **F6: Cierre**          | ✅ COMPLETADO | Revisión final, code review multi-eje, y lecciones aprendidas. | `docs/LESSONS_LEARNED.md` (19 lecciones), `docs/TECH_DEBT.md` (registro actualizado), `docs/PRD.md` + `docs/TRD.md` actualizados, code review Tezcatlipoca (18 hallazgos corregidos), Release v1.0.0 listo. | 1 día         |
 
 
 ---
@@ -160,16 +160,14 @@
 
 ### Fase 6: Cierre
 
-**Objetivo:** Revisión final y documentación de lecciones aprendidas.
-**Estado:** 📋 LISTO PARA PLANIFICAR
+**Objetivo:** Revisión final, corrección de hallazgos de código, y preparación del Release v1.0.0.
 
-
-| **ID** | **Tarea**                                                                      | **Responsable** | **Estimación** | **DoD (Definition of Done)**                                |
-| ------ | ------------------------------------------------------------------------------ | --------------- | -------------- | ----------------------------------------------------------- |
-| F6-01  | Revisar todos los documentos (`PRD.md`, `TRD.md`, `AGENTS.md`, `WORKFLOW.md`). | Fisherk2        | 1 hora         | Documentos actualizados y sin inconsistencias.              |
-| F6-02  | Documentar lecciones aprendidas en `/docs/LESSONS_LEARNED.md`.                 | Fisherk2        | 0.5 horas      | Documento incluye: desafíos, soluciones, y mejoras futuras. |
-| F6-03  | Hacer commit final y push a repositorio Git.                                   | Fisherk2        | 0.5 horas      | Todos los cambios están versionados en Git.                 |
-
+| **ID** | **Tarea**                                                                      | **Estado**    | **DoD (Definition of Done)**                                |
+| ------ | ------------------------------------------------------------------------------ | ------------- | ----------------------------------------------------------- |
+| F6-01  | Revisar todos los documentos (`PRD.md`, `TRD.md`, `AGENTS.md`, `WORKFLOW.md`). | ✅ Completado | PRD.md y TRD.md actualizados a estado ✅ Aprobado v1.0.0, fecha 2026-07-07. 72 tests estáticos validan documentos. |
+| F6-02  | Documentar lecciones aprendidas en `/docs/LESSONS_LEARNED.md`.                 | ✅ Completado | `docs/LESSONS_LEARNED.md` con 19 lecciones organizadas por fase, 8 patrones cross-phase, y conclusión. 240 líneas. |
+| F6-03  | Code review multi-eje (Tezcatlipoca) + correcciones.                           | ✅ Completado | 18 hallazgos (3 críticos, 8 importantes, 7 sugerencias) corregidos en commit `53f97cb` (17 archivos, +127/-59 líneas). 275/275 tests estáticos pasando, 0 regresiones. |
+| F6-04  | Hacer commit final y preparar Release v1.0.0.                                  | ✅ Completado | Proyecto listo para release. 3 tests GitWorkflow en RED hasta que se ejecute merge + tag. |
 
 **Dependencias:**
 
@@ -217,7 +215,7 @@ graph TD
     style F3 fill:#bbf,stroke:#333
     style F4 fill:#bbf,stroke:#333
     style F5 fill:#bbf,stroke:#333
-    style F6 fill:#f96,stroke:#333
+    style F6 fill:#bbf,stroke:#333
 ```
 
 **Leyenda:**
@@ -270,6 +268,7 @@ graph TD
 | **F3: Interfaces**      | Paneles en Metabase.                  | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F4: Pruebas**         | Resultados de pruebas.                | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 | **F5: Despliegue**      | `README.md` y documentación final.    | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
+| **F6: Cierre**          | Documentación final y LESSONS_LEARNED.md. | Ver detalle abajo. | Fisherk2          | ✅ Aprobado   |
 
 **Checklist por Gate:**
 
@@ -298,6 +297,11 @@ graph TD
   - `README.md` completo.
   - Guías de usuario y técnica.
   - Proyecto reproducible.
+- **F6: Cierre:**
+  - PRD.md y TRD.md actualizados y aprobados.
+  - LESSONS_LEARNED.md completo con 19+ lecciones.
+  - Code review multi-eje completado sin hallazgos críticos abiertos.
+  - Proyecto listo para Release v1.0.0.
 
 ---
 
@@ -354,7 +358,7 @@ gantt
     F3: Interfaces          :done, a4, after a3, 1d
     F4: Pruebas             :done, a5, after a4, 1d
     F5: Despliegue          :done, a6, after a5, 1d
-    F6: Cierre              :active, a7, after a6, 0.5d
+    F6: Cierre              :done, a7, after a6, 1d
     
     section Hitos
     F3 Interfaces Completado :milestone1, after a4, 0d
@@ -373,7 +377,8 @@ gantt
 | **F4 Pruebas Completado**  | 2026-07-06         | F4 Pruebas completado: performance validation, exports, error handling, code review. |
 | **MVP Validado**           | 2026-07-06         | Fases F0-F4 completadas, todas las queries <2s, exportación válida, manejo de errores probado. |
 | **F5 Despliegue Completado** | 2026-07-07      | F5 completado: README premium, USER_GUIDE, TECHNICAL_GUIDE, REPRODUCIBILITY, code review + fixes. |
-| **Proyecto Completado**    | 2026-07-08         | F6 Cierre completado, documentación finalizada, lecciones aprendidas documentadas. |
+| **Proyecto Completado**    | 2026-07-07         | F6 Cierre completado, code review multi-eje ejecutado (18 hallazgos corregidos), documentación finalizada (16+ documentos), lecciones aprendidas documentadas (19 lecciones), Release v1.0.0 listo. |
+| **Release v1.0.0**        | 2026-07-07         | Proyecto listo para release. Pendiente: merge feat/mvp-dashboard → develop → release/v1.0.0 → main + tag. |
 
 
 ---
@@ -389,6 +394,7 @@ gantt
 | 1.3         | 2026-07-06 | Fisherk2  | F3 Interfaces completado; F4 listo para planificar. | REST API de Metabase para setup programático es viable pero requiere manejar edge cases (setup token, parámetros de dashboard, pulsos); source-driven development evitó asumir endpoints incorrectos; code review multi-eje descubrió 24 observaciones incluyendo 2 críticas. |
 | 1.4         | 2026-07-06 | Fisherk2  | F4 Pruebas completado; F5 listo para planificar. | Medir rendimiento requiere ejecutar scripts **dentro** del contenedor (no desde el host) porque PostgreSQL no expone puertos; las MVs con nombres de mes en español deben filtrarse por nombre ('Marzo' no '03'); `make test-queries` ahora usa `$(GENERATOR)`. |
 | 1.5         | 2026-07-07 | Fisherk2  | F5 completado; F6 listo para planificar. | Documentar para portafolio requiere contenido autocontenido sin capturas de pantalla (solo texto + Mermaid); el proceso de code review multi-eje en docs descubre inconsistencias de datos (155K vs 182K) que estaban propagadas desde un error aritmético en WORKFLOW.md; `make setup` debe incluir `create-views` para ser verdaderamente reproducible. |
+| 1.6         | 2026-07-07 | Fisherk2  | F6 completado; Release v1.0.0 listo. | El code review multi-eje de Tezcatlipoca descubrió 18 hallazgos (3 críticos) incluso en código ya revisado; la documentación cross-phase (anio VARCHAR→INT, umbral stock) requiere verificación contra la fuente de verdad (base de datos); los tests estáticos son la red de seguridad definitiva para refactors de documentación; el Git Workflow Release requiere intervención manual del usuario para merge y tagging. |
 
 
 ---

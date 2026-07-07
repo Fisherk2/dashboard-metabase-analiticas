@@ -5,6 +5,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![GNU Make](https://img.shields.io/badge/Make-4.0+-A81D33?logo=gnu&logoColor=white)](https://www.gnu.org/software/make/)
+[![Status](https://img.shields.io/badge/Status-v1.0.0--brightgreen.svg)](SPEC.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Panel visual conectado a **PostgreSQL** que muestra KPIs de inventario, rotación y alertas de stock mínimo para un e-commerce simulado. Proyecto que demuestra diseño de **schema estrella para OLAP**, optimización de **queries SQL**, integración con **Metabase** como herramienta BI, y generación de **datos sintéticos** con Python + Faker.

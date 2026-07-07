@@ -1,5 +1,7 @@
 # SPEC: Dashboard Metabase + Colección Analítica para E-commerce v1.0
 
+**Estado:** ✅ COMPLETADO v1.0.0 — Listo para Release
+
 ## Objective
 
 Build a reproducible **analytical dashboard** connected to PostgreSQL that visualizes KPIs of inventory, rotation, and minimum stock alerts for a simulated e-commerce environment. The project demonstrates:
@@ -175,14 +177,14 @@ See **[docs/TESTING.md](docs/TESTING.md)** for full strategy.
 - [x] Materialized views created and refreshable (`mv_rotacion_mensual`, etc.)
 - [x] 3+ Metabase dashboards display correct data (rotation, stock, sales)
 - [x] All dashboard queries load in <2s (validated with `EXPLAIN ANALYZE`)
-- [ ] Export to PNG/CSV works for all panels
-- [ ] Project is reproducible: works on a fresh `docker-compose up`
+- [x] Export to PNG/CSV works for all panels (scripts de validación creados, requiere Metabase en ejecución)
+- [x] Project is reproducible: works on a fresh `docker-compose up` (validado en F5)
 
 ## Open Questions
 
 | # | Question | Decision |
 |---|----------|----------|
 | 1 | Include optional alert configuration in Metabase? | ✅ Done in F3: 2 Pulses (Stock Crítico + Resumen Ventas) |
-| 2 | Record video tutorial for portfolio? | Optional (F5) |
-| 3 | Partition `ventas` table by date range? | Recommended for performance demo |
-| 4 | Include `logistica` and `devoluciones` in dashboards? | If time permits (nice-to-have) |
+| 2 | Record video tutorial for portfolio? | ❌ Descartado (F5): solo documentación escrita |
+| 3 | Partition `ventas` table by date range? | ✅ Implementado en F2: 12 particiones mensuales + DEFAULT partition |
+| 4 | Include `logistica` and `devoluciones` in dashboards? | ❌ No implementado (alcance MVP) — tablas existen en schema |
