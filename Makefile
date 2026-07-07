@@ -90,6 +90,7 @@ data-count: ## Contar registros por tabla
 .PHONY: create-views mv-refresh indexes-check
 
 create-views: ## Crear vistas materializadas desde sql/views/*.sql
+	@ls sql/views/*.sql >/dev/null 2>&1 || { echo "Error: no SQL files found in sql/views/"; exit 1; }
 	@for f in sql/views/*.sql; do \
 		echo "  Running: $$f"; \
 		$(PSQL) < $$f; \
