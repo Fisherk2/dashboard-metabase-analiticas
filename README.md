@@ -73,13 +73,6 @@ Los dashboards están disponibles en `http://localhost:3000` después de ejecuta
 | [docs/TESTING.md](docs/TESTING.md) | Estrategia de testing (unidad, integración, rendimiento) |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Plan de implementación por fases (F0–F6) |
 
-## Lo Que Aprendí
-
-- Diseño de **schema estrella** para cargas OLAP: tablas de hechos vs. dimensiones, surrogate keys, granularidad.
-- Optimización de queries con **vistas materializadas**, índices compuestos y particionamiento por rango de fechas.
-- Integración de **Metabase** con PostgreSQL vía JDBC: conexión, consultas nativas, filtros y exportación.
-- Generación de datos sintéticos con **Python + Faker** respetando reglas de negocio (distribución de ventas, rotación de inventario).
-- Automatización del flujo completo con **Docker Compose + Makefile** para reproducibilidad.
 
 ## Licencia
 
