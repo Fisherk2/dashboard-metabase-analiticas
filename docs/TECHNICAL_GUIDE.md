@@ -13,7 +13,7 @@ El proyecto sigue una arquitectura de **3 capas** con separación de concerns:
 ```mermaid
 graph LR
     subgraph Data_Layer["Capa de Datos"]
-        A[Python + Faker] -->|155K registros| B[(PostgreSQL 15+)]
+        A[Python + Faker] -->|182K registros| B[(PostgreSQL 15+)]
         B --> C[MV: mv_rotacion_mensual]
         B --> D[MV: mv_stock_actual]
         B --> E[MV: mv_top_productos]
@@ -362,9 +362,10 @@ make setup
 Este comando ejecuta en orden:
 1. `make deps` — pip install -r requirements.txt
 2. `make up` — docker compose up -d
-3. `make db-init` — psql init.sql (schema + índices + MVs + particiones)
+3. `make db-init` — psql init.sql (schema + índices)
 4. `make data-generate` — python generate_data.py
-5. `make mv-refresh` — REFRESH MATERIALIZED VIEW
+5. `make create-views` — Crea MVs desde `sql/views/*.sql`
+6. `make mv-refresh` — REFRESH MATERIALIZED VIEW
 
 **Requisitos del entorno:**
 - Docker 20+ con Docker Compose 2+
@@ -410,7 +411,7 @@ make destroy && make setup
 ### 5. Recreación de Particiones Requiere CASCADE
 
 **Problema:** `DROP TABLE ventas` falla porque las particiones existen y las MVs referencian la tabla.
-**Lección:** Usar `DROP TABLE ventas CASCADE` y refrescar MVs después de recrear particiones. El comando `make db-init` maneja esto automáticamente.
+**Lección:** Usar `DROP TABLE ventas CASCADE` y refrescar MVs después de recrear particiones. Nota: `make db-init` recrea tablas + índices pero no aplica particiones automáticamente; requiere migración manual (`sql/partitions/partition_ventas.sql`) documentada en `REPRODUCIBILITY.md` Issue 2.
 **Archivo relevante:** `scripts/init.sql`, `sql/partitions/ventas_partitions.sql`
 
 ### 6. Source-Driven Development para API de Metabase
