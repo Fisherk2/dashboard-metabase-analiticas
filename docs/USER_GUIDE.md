@@ -34,9 +34,10 @@ make setup
 **Qué hace `make setup`:**
 1. `make deps` — Instala dependencias Python (Faker, psycopg2, requests)
 2. `make up` — Levanta PostgreSQL y Metabase en contenedores Docker
-3. `make db-init` — Crea el schema estrella (tablas, índices, vistas materializadas, particiones)
-4. `make data-generate` — Genera ~155K registros sintéticos
-5. `make mv-refresh` — Refresca las vistas materializadas
+3. `make db-init` — Crea el schema estrella (tablas + índices)
+4. `make data-generate` — Genera ~182K registros sintéticos
+5. `make create-views` — Crea las 3 vistas materializadas desde `sql/views/*.sql`
+6. `make mv-refresh` — Refresca las vistas materializadas con datos actuales
 
 **Verificar que todo funciona:**
 ```bash
