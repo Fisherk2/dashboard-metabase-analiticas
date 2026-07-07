@@ -12,21 +12,37 @@ Verifica todos los criterios de aceptación del plan F2:
 import re
 import ast
 from pathlib import Path
+from typing import Optional
 
 import pytest
+
+# ─── Constants ────────────────────────────────────────────────
+INIT_SQL_PATH = "scripts/init.sql"
+
+
+def _get_table_block(content: str, table: str) -> Optional[str]:
+    """Extract the CREATE TABLE block for *table* from *content*.
+
+    Returns the text between ``CREATE TABLE *table* (`` and the closing ``);``,
+    or ``None`` if the table is not found.
+    """
+    blocks = re.findall(
+        rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
+        content, re.IGNORECASE | re.DOTALL
+    )
+    return blocks[0] if blocks else None
+
 
 # ─── Slice 1: Schema Foundation ───────────────────────────────
 
 class TestInitSql:
     """F2-01: scripts/init.sql existe y define 6 tablas de dimensiones."""
 
-    INIT_SQL_PATH = "scripts/init.sql"
-
     def test_init_sql_exists(self, root: Path):
-        assert (root / self.INIT_SQL_PATH).exists(), f"Missing: {self.INIT_SQL_PATH}"
+        assert (root / INIT_SQL_PATH).exists(), f"Missing: {INIT_SQL_PATH}"
 
     def test_init_sql_has_content(self, root: Path):
-        content = (root / self.INIT_SQL_PATH).read_text()
+        content = (root / INIT_SQL_PATH).read_text()
         assert len(content.strip()) > 0, "init.sql is empty"
 
     @pytest.mark.parametrize("table", [
@@ -39,7 +55,7 @@ class TestInitSql:
     ])
     def test_dimension_table_exists(self, root: Path, table: str):
         """Cada tabla de dimensión declarada con CREATE TABLE."""
-        content = (root / self.INIT_SQL_PATH).read_text()
+        content = (root / INIT_SQL_PATH).read_text()
         assert re.search(
             rf"CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?{table}\s*\(",
             content, re.IGNORECASE
@@ -55,25 +71,14 @@ class TestInitSql:
     ])
     def test_dimension_has_required_column(self, root: Path, table: str, column: str):
         """Cada tabla tiene al menos su columna principal."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        # Extract table definition block: from CREATE TABLE name to the closing semicolon
-        # Use a simpler approach: find the table name in the content and check column name
-        # appears reasonably after it
-        lines = content.splitlines()
-        in_table = False
-        found_column = False
-        for line in lines:
-            stripped = line.strip()
-            # Match CREATE TABLE statement (not COMMENT ON TABLE)
-            if re.match(rf"CREATE\s+TABLE", stripped, re.IGNORECASE) and table in stripped.lower():
-                in_table = True
-                continue
-            if in_table and stripped == ");":
-                break
-            if in_table and stripped.startswith(column):
-                found_column = True
-                break
-        assert found_column, f"Missing column '{column}' in table '{table}'"
+        content = (root / INIT_SQL_PATH).read_text()
+        block = _get_table_block(content, table)
+        assert block is not None, f"Cannot find table '{table}' in init.sql"
+        lines_in_block = block.splitlines()
+        assert any(
+            stripped.startswith(column) for stripped in
+            (l.strip() for l in lines_in_block)
+        ), f"Missing column '{column}' in table '{table}'"
 
     @pytest.mark.parametrize("table,constraint_type", [
         ("categorias", "PRIMARY KEY"),
@@ -85,15 +90,10 @@ class TestInitSql:
     ])
     def test_dimension_has_primary_key(self, root: Path, table: str, constraint_type: str):
         """Cada tabla tiene PRIMARY KEY."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        # Extract the CREATE TABLE block for this table
-        # Check if PRIMARY KEY appears in its definition
-        blocks = re.findall(
-            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
-            content, re.IGNORECASE | re.DOTALL
-        )
-        if blocks:
-            assert "PRIMARY KEY" in blocks[0].upper(), (
+        content = (root / INIT_SQL_PATH).read_text()
+        block = _get_table_block(content, table)
+        if block:
+            assert "PRIMARY KEY" in block.upper(), (
                 f"Table '{table}' missing PRIMARY KEY"
             )
 
@@ -105,20 +105,16 @@ class TestInitSql:
     ])
     def test_dimension_has_unique_constraint(self, root: Path, table: str, unique_column: str):
         """Tablas clave tienen UNIQUE en columna natural."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        blocks = re.findall(
-            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
-            content, re.IGNORECASE | re.DOTALL
-        )
-        if blocks:
-            assert "UNIQUE" in blocks[0].upper() and unique_column in blocks[0], (
+        content = (root / INIT_SQL_PATH).read_text()
+        block = _get_table_block(content, table)
+        if block:
+            assert "UNIQUE" in block.upper() and unique_column in block, (
                 f"Table '{table}' missing UNIQUE constraint on '{unique_column}'"
             )
 
     def test_dimension_table_count(self, root: Path):
         """Al menos 6 tablas de dimensión definidas."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        # Count CREATE TABLE statements that are dimension tables
+        content = (root / INIT_SQL_PATH).read_text()
         dimension_tables = ["categorias", "proveedores", "productos", "clientes", "tiempo", "promociones"]
         create_count = sum(
             1 for t in dimension_tables
@@ -128,7 +124,7 @@ class TestInitSql:
 
     def test_init_sql_create_tables_end_with_semicolon(self, root: Path):
         """Cada bloque CREATE TABLE termina con );"""
-        content = (root / self.INIT_SQL_PATH).read_text()
+        content = (root / INIT_SQL_PATH).read_text()
         lines = content.splitlines()
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
@@ -151,21 +147,16 @@ class TestInitSql:
     ])
     def test_productos_has_critical_columns(self, root: Path, table: str, expected_column: str):
         """Tabla productos tiene columnas críticas."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        blocks = re.findall(
-            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
-            content, re.IGNORECASE | re.DOTALL
-        )
-        if blocks:
-            assert expected_column in blocks[0], (
+        content = (root / INIT_SQL_PATH).read_text()
+        block = _get_table_block(content, table)
+        if block:
+            assert expected_column in block, (
                 f"Table '{table}' missing critical column '{expected_column}'"
             )
 
 
 class TestCheckConstraints:
     """CHECK constraints en precios, stocks y cantidades."""
-
-    INIT_SQL_PATH = "scripts/init.sql"
 
     @pytest.mark.parametrize("table,constraint_pattern", [
         ("productos", "precio > 0"),
@@ -175,21 +166,16 @@ class TestCheckConstraints:
     ])
     def test_check_constraint_exists(self, root: Path, table: str, constraint_pattern: str):
         """CHECK constraints definidos para dominio de datos."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        blocks = re.findall(
-            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
-            content, re.IGNORECASE | re.DOTALL
-        )
-        if blocks:
-            assert constraint_pattern in blocks[0].lower(), (
+        content = (root / INIT_SQL_PATH).read_text()
+        block = _get_table_block(content, table)
+        if block:
+            assert constraint_pattern in block.lower(), (
                 f"Missing CHECK constraint '{constraint_pattern}' in table '{table}'"
             )
 
 
 class TestFactTables:
     """F2-02: init.sql define 4 tablas de hechos."""
-
-    INIT_SQL_PATH = "scripts/init.sql"
 
     @pytest.mark.parametrize("table", [
         "ventas",
@@ -199,7 +185,7 @@ class TestFactTables:
     ])
     def test_fact_table_exists(self, root: Path, table: str):
         """Cada tabla de hecho declarada con CREATE TABLE."""
-        content = (root / self.INIT_SQL_PATH).read_text()
+        content = (root / INIT_SQL_PATH).read_text()
         assert re.search(
             rf"CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?{table}\s*\(",
             content, re.IGNORECASE
@@ -207,7 +193,7 @@ class TestFactTables:
 
     def test_total_tables(self, root: Path):
         """10 tablas en total (6 dim + 4 hechos)."""
-        content = (root / self.INIT_SQL_PATH).read_text()
+        content = (root / INIT_SQL_PATH).read_text()
         all_tables = [
             "categorias", "proveedores", "productos", "clientes",
             "tiempo", "promociones", "ventas", "inventario",
@@ -221,7 +207,7 @@ class TestFactTables:
 
     def test_schema_section_headers(self, root: Path):
         """init.sql tiene secciones delimitadas para DIMENSIONES y HECHOS."""
-        content = (root / self.INIT_SQL_PATH).read_text()
+        content = (root / INIT_SQL_PATH).read_text()
         assert "HECHOS" in content.upper(), "Missing HECHOS section header"
 
     @pytest.mark.parametrize("table,expected_column", [
@@ -237,21 +223,16 @@ class TestFactTables:
     ])
     def test_fact_has_critical_column(self, root: Path, table: str, expected_column: str):
         """Tablas de hechos tienen columnas críticas de negocio."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        blocks = re.findall(
-            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
-            content, re.IGNORECASE | re.DOTALL
-        )
-        if blocks:
-            assert expected_column in blocks[0], (
+        content = (root / INIT_SQL_PATH).read_text()
+        block = _get_table_block(content, table)
+        if block:
+            assert expected_column in block, (
                 f"Table '{table}' missing critical column '{expected_column}'"
             )
 
 
 class TestFactCheckConstraints:
     """CHECK constraints en tablas de hechos."""
-
-    INIT_SQL_PATH = "scripts/init.sql"
 
     @pytest.mark.parametrize("table,constraint_pattern", [
         ("ventas", "cantidad > 0"),
@@ -262,21 +243,16 @@ class TestFactCheckConstraints:
     ])
     def test_fact_check_constraint_exists(self, root: Path, table: str, constraint_pattern: str):
         """CHECK constraints definidos en tablas de hechos."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        blocks = re.findall(
-            rf"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?{re.escape(table)}\s*\((.*?)\)\s*;",
-            content, re.IGNORECASE | re.DOTALL
-        )
-        if blocks:
-            assert constraint_pattern in blocks[0].lower(), (
+        content = (root / INIT_SQL_PATH).read_text()
+        block = _get_table_block(content, table)
+        if block:
+            assert constraint_pattern in block.lower(), (
                 f"Missing CHECK constraint '{constraint_pattern}' in table '{table}'"
             )
 
 
 class TestForeignKeys:
     """Foreign Keys definidas en tablas con referencias."""
-
-    INIT_SQL_PATH = "scripts/init.sql"
 
     @pytest.mark.parametrize("table,column,references", [
         ("productos", "categoria_id", "categorias"),
@@ -289,8 +265,7 @@ class TestForeignKeys:
     ])
     def test_fk_reference_exists(self, root: Path, table: str, column: str, references: str):
         """FKs referencian tabla padre."""
-        content = (root / self.INIT_SQL_PATH).read_text()
-        # Check for REFERENCES clause
+        content = (root / INIT_SQL_PATH).read_text()
         assert re.search(
             rf"{column}.+REFERENCES.+{references}",
             content, re.IGNORECASE

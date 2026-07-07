@@ -11,6 +11,7 @@ Verifica todos los criterios de aceptación del plan F3:
 import ast
 import json
 from pathlib import Path
+from typing import List
 
 import pytest
 
@@ -22,12 +23,35 @@ METABASE_DOCS = PROJECT_ROOT / "docs" / "METABASE_SETUP.md"
 QUERIES_DASHBOARD = PROJECT_ROOT / "sql" / "queries_dashboard.sql"
 
 
+def _get_metabase_setup_methods() -> List[str]:
+    """Return the list of method names defined in the MetabaseSetup class.
+
+    Parses ``setup_metabase.py`` with ``ast`` and extracts method names
+    from the ``MetabaseSetup`` class body.
+    """
+    tree = ast.parse(SETUP_SCRIPT.read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
+            return [n.name for n in node.body
+                    if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    return []
+
+
 # ═══════════════════════════════════════════════════════════════
 # Slice 1: Setup Reproductible vía Metabase API (F3-01 a F3-04)
 # ═══════════════════════════════════════════════════════════════
 
 class TestSetupMetabaseScript:
     """F3-01: scripts/setup_metabase.py existe y define clases/métodos esperados."""
+
+    REQUIRED_METHODS = [
+        "authenticate",
+        "create_database_connection",
+        "create_question",
+        "create_dashboard",
+        "setup_dashboard_with_cards",
+        "create_pulse",
+    ]
 
     def test_setup_script_exists(self):
         assert SETUP_SCRIPT.exists(), f"Missing: {SETUP_SCRIPT}"
@@ -38,40 +62,20 @@ class TestSetupMetabaseScript:
 
     def test_setup_has_metabase_setup_class(self):
         """El script define la clase MetabaseSetup."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
-        has_class = any(
-            isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup"
-            for node in ast.walk(tree)
+        methods = _get_metabase_setup_methods()
+        assert len(methods) > 0, "Missing 'MetabaseSetup' class in setup_metabase.py"
+
+    @pytest.mark.parametrize("method_name", REQUIRED_METHODS)
+    def test_setup_has_required_method(self, method_name: str):
+        """MetabaseSetup debe definir los métodos requeridos."""
+        methods = _get_metabase_setup_methods()
+        assert method_name in methods, (
+            f"Missing '{method_name}' method. Found: {methods}"
         )
-        assert has_class, "Missing 'MetabaseSetup' class in setup_metabase.py"
-
-    def test_setup_has_authenticate_method(self):
-        """MetabaseSetup define el método authenticate()."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
-                methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                assert "authenticate" in methods, (
-                    f"Missing 'authenticate' method. Found: {methods}"
-                )
-
-    def test_setup_has_create_database_connection_method(self):
-        """MetabaseSetup define el método create_database_connection()."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
-                methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                assert "create_database_connection" in methods, (
-                    f"Missing 'create_database_connection' method. Found: {methods}"
-                )
 
     def test_setup_has_main_function(self):
         """El script define una función main() en el módulo."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
+        tree = ast.parse(SETUP_SCRIPT.read_text())
         has_main = any(
             isinstance(node, ast.FunctionDef) and node.name == "main"
             for node in ast.walk(tree)
@@ -101,50 +105,6 @@ class TestSetupMetabaseScript:
         """El argparse soporta los flags esperados del plan F3."""
         source = SETUP_SCRIPT.read_text()
         assert arg in source, f"Missing argparse argument: {arg}"
-
-    def test_setup_has_create_question_method(self):
-        """MetabaseSetup define create_question()."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
-                methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                assert "create_question" in methods, (
-                    f"Missing 'create_question' method. Found: {methods}"
-                )
-
-    def test_setup_has_create_dashboard_method(self):
-        """MetabaseSetup define create_dashboard() y add_card_to_dashboard()."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
-                methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                assert "create_dashboard" in methods, (
-                    f"Missing 'create_dashboard' method. Found: {methods}"
-                )
-
-    def test_setup_has_setup_dashboard_with_cards_method(self):
-        """MetabaseSetup define setup_dashboard_with_cards()."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
-                methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                assert "setup_dashboard_with_cards" in methods, (
-                    f"Missing 'setup_dashboard_with_cards' method. Found: {methods}"
-                )
-
-    def test_setup_has_create_pulse_method(self):
-        """MetabaseSetup define create_pulse()."""
-        source = SETUP_SCRIPT.read_text()
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name == "MetabaseSetup":
-                methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                assert "create_pulse" in methods, (
-                    f"Missing 'create_pulse' method. Found: {methods}"
-                )
 
 
 class TestCollectionExport:

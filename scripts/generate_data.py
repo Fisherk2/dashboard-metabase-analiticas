@@ -122,6 +122,19 @@ class DataGenerator:
         if self.debug:
             logging.info(msg)
 
+    def _bulk_insert(self, sql: str, rows: list, page_size: int = 1000,
+                     log_msg: str = "") -> None:
+        """Execute a batch INSERT wrapped in a transaction.
+
+        Calls ``BEGIN``, ``execute_values``, and ``COMMIT``.
+        Logs *log_msg* after commit when in debug mode.
+        """
+        self.cur.execute("BEGIN")
+        execute_values(self.cur, sql, rows, page_size=page_size)
+        self.conn.commit()
+        if log_msg:
+            self._log(log_msg)
+
     # ─── Table name whitelist ──────────────────────────────────
     ALLOWED_TABLES = frozenset({
         "categorias", "proveedores", "productos", "clientes",
@@ -157,24 +170,19 @@ class DataGenerator:
             "Videojuegos", "Fotografía", "Relojes", "Joyas", "Instrumentos",
         ]
         rows = [(n,) for n in categorias]
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO categorias (nombre) VALUES %s ON CONFLICT (nombre) DO NOTHING",
-            rows, page_size=1000
+            rows, log_msg=f"✓ categorias: {len(categorias)} registros",
         )
-        self.conn.commit()
-        self._log(f"✓ categorias: {len(categorias)} registros")
 
     def _seed_proveedores(self) -> None:
         """Insert 50 suppliers with Faker."""
         rows = [(self.fake.company(), self.fake.name(), self.fake.email())
                 for _ in range(self.num["proveedores"])]
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO proveedores (nombre, contacto, email) VALUES %s ON CONFLICT (email) DO NOTHING",
-            rows, page_size=1000
+            rows,
         )
-        self.conn.commit()
         self.cur.execute("SELECT COUNT(*) FROM proveedores")
         count = self.cur.fetchone()[0]
         self._log(f"✓ proveedores: {count} registros")
@@ -207,13 +215,10 @@ class DataGenerator:
                 self.fake.date_time_between(start_date="-2y", end_date="now"),
             ))
 
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO productos (nombre, descripcion, precio, stock_actual, stock_minimo, categoria_id, proveedor_id, fecha_creacion) VALUES %s",
-            rows, page_size=1000
+            rows, log_msg=f"✓ productos: {len(rows)} registros",
         )
-        self.conn.commit()
-        self._log(f"✓ productos: {len(rows)} registros")
 
     def _seed_clientes(self) -> None:
         """Insert 2K customers with Faker."""
@@ -225,12 +230,10 @@ class DataGenerator:
                 self.fake.address(),
                 self.fake.date_time_between(start_date="-3y", end_date="now"),
             ))
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO clientes (nombre, email, direccion, fecha_registro) VALUES %s ON CONFLICT (email) DO NOTHING",
-            rows, page_size=1000
+            rows,
         )
-        self.conn.commit()
         self.cur.execute("SELECT COUNT(*) FROM clientes")
         count = self.cur.fetchone()[0]
         self._log(f"✓ clientes: {count} registros")
@@ -250,13 +253,10 @@ class DataGenerator:
                 trim,
             ))
             d += timedelta(days=1)
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO tiempo (fecha, dia_semana, mes, anio, trimestre) VALUES %s ON CONFLICT (fecha) DO NOTHING",
-            rows, page_size=365
+            rows, page_size=365, log_msg=f"✓ tiempo: {len(rows)} registros (2026)",
         )
-        self.conn.commit()
-        self._log(f"✓ tiempo: {len(rows)} registros (2026)")
 
     def _seed_promociones(self) -> None:
         """Insert 30 promotions with date ranges."""
@@ -275,13 +275,10 @@ class DataGenerator:
                 end,
                 cat_id,
             ))
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO promociones (nombre, descuento, fecha_inicio, fecha_fin, categoria_id) VALUES %s",
-            rows, page_size=1000
+            rows, log_msg=f"✓ promociones: {len(rows)} registros",
         )
-        self.conn.commit()
-        self._log(f"✓ promociones: {len(rows)} registros")
 
     # ─── Fact Seeders ───────────────────────────────────────
 
@@ -328,13 +325,10 @@ class DataGenerator:
             if (i + 1) % 10000 == 0:
                 self._log(f"  ventas progress: {i + 1}/{self.num['ventas']}")
 
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO ventas (producto_id, cliente_id, fecha_id, cantidad, precio_unitario, total, promocion_id, fecha_venta) VALUES %s",
-            rows, page_size=1000
+            rows, log_msg=f"✓ ventas: {len(rows)} registros",
         )
-        self.conn.commit()
-        self._log(f"✓ ventas: {len(rows)} registros")
 
     def _seed_inventario(self) -> None:
         """Insert 50K inventory records: daily snapshots per product."""
@@ -368,13 +362,10 @@ class DataGenerator:
                 ))
                 stock_inicial = stock_final
 
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO inventario (producto_id, fecha_id, stock_inicial, stock_final, proveedor_id, fecha_registro) VALUES %s",
-            rows, page_size=1000
+            rows, log_msg=f"✓ inventario: {len(rows)} registros",
         )
-        self.conn.commit()
-        self._log(f"✓ inventario: {len(rows)} registros")
 
     def _seed_devoluciones(self) -> None:
         """Insert 5K returns (5% of ventas). Pre-fetches venta data to avoid N+1."""
@@ -403,13 +394,10 @@ class DataGenerator:
                 random.choice(MOTIVOS_DEVOLUCION),
                 fecha_venta + timedelta(days=random.randint(1, 30)),
             ))
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO devoluciones (venta_id, producto_id, cliente_id, fecha_id, cantidad, motivo, fecha_devolucion) VALUES %s",
-            rows, page_size=1000
+            rows, log_msg=f"✓ devoluciones: {len(rows)} registros",
         )
-        self.conn.commit()
-        self._log(f"✓ devoluciones: {len(rows)} registros")
 
     def _seed_logistica(self) -> None:
         """Insert 20K shipping records (20% of ventas)."""
@@ -432,13 +420,10 @@ class DataGenerator:
                 fecha_venta + timedelta(days=dias_entrega)
                 if random.random() > 0.3 else None,
             ))
-        self.cur.execute("BEGIN")
-        execute_values(self.cur,
+        self._bulk_insert(
             "INSERT INTO logistica (venta_id, proveedor_id, fecha_entrega_id, estado, metodo_envio, fecha_entrega) VALUES %s",
-            rows, page_size=1000
+            rows, log_msg=f"✓ logistica: {len(rows)} registros",
         )
-        self.conn.commit()
-        self._log(f"✓ logistica: {len(rows)} registros")
 
     # ─── Orchestration ──────────────────────────────────────
 
