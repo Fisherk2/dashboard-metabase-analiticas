@@ -103,7 +103,7 @@ Esto levanta PostgreSQL 15+ y Metabase, crea el schema estrella, genera ~182K re
 
 ```bash
 # 1. Clonar el repositorio
-git clone <repo-url> dashboard-metabase
+git clone https://github.com/Fisherk2/dashboard-metabase-analiticas.git dashboard-metabase
 cd dashboard-metabase
 
 # 2. Crear archivo de credenciales
