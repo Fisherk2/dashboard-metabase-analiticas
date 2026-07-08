@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.0.1] - 2026-07-07
+
+### Fixed
+
+- **LICENSE** — copyright holder updated from `[Your Name]` to `Fisherk2`
+- **README.md** — repository URL placeholder replaced with actual URL `https://github.com/Fisherk2/dashboard-metabase-analiticas.git`
+- **CONTRIBUTING.md** — created from scratch with contribution guidelines, code standards, PR process, and code of conduct (124 lines)
+
+---
+
 ## [v1.0.0] - 2026-07-07
 
 ### Added
@@ -115,5 +125,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 [Unreleased]: https://github.com/Fisherk2/dashboard-metabase-analiticas/compare/v1.0.0...HEAD
+[v1.0.1]: https://github.com/Fisherk2/dashboard-metabase-analiticas/releases/tag/v1.0.1
 [v1.0.0]: https://github.com/Fisherk2/dashboard-metabase-analiticas/releases/tag/v1.0.0
 [v0.1.0]: https://github.com/Fisherk2/dashboard-metabase-analiticas/releases/tag/v0.1.0
